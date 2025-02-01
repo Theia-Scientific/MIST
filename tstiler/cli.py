@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+import importlib.metadata
 import logging
 import os
 import sys
 import typer
 
 from pathlib import Path
+from tstiler import __app_name__
 from typing import List, Optional, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
