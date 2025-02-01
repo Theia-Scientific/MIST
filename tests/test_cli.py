@@ -16,6 +16,7 @@ from tstiler.cli import (
     map_verbosity,
     NPY_MIME_TYPE,
     read_image_file,
+    TIFF_MIME_TYPE,
     UnknownMimeTypeError,
 )
 from typer.testing import CliRunner
@@ -71,6 +72,13 @@ def blank_npy(blank_image, tmp_path):
 
 
 @pytest.fixture
+def blank_tif(blank_image, tmp_path):
+    tif_file = tmp_path.joinpath("image.tif")
+    cv2.imwrite(str(tif_file), blank_image)
+    yield tif_file
+
+
+@pytest.fixture
 def unknown_image_file(blank_png):
     unknown_image_file = blank_png.with_suffix(".abc")
     os.rename(blank_png, unknown_image_file)
@@ -107,10 +115,17 @@ def test_read_image_file_fail_unknown_mime_type(unknown_image_file):
         read_image_file(unknown_image_file)
 
 
-def test_decode_data(blank_image, blank_npy):
+def test_decode_data_npy(blank_image, blank_npy):
     with open(blank_npy, "rb+") as f:
         data = f.read()
     actual = decode_data(data, NPY_MIME_TYPE)
+    assert (actual == blank_image).all()
+
+
+def test_decode_data_tif(blank_image, blank_tif):
+    with open(blank_tif, "rb+") as f:
+        data = f.read()
+    actual = decode_data(data, TIFF_MIME_TYPE)
     assert (actual == blank_image).all()
 
 

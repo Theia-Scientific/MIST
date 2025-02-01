@@ -9,6 +9,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [ "Programming Language :: Python :: 3", "Operating System :: OS Independent" ]
 dependencies = [
+    "imagecodecs",
     "pydantic",
     "pydantic-settings",
     "python-dotenv",
