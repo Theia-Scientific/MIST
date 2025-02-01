@@ -12,6 +12,8 @@ dependencies = [
     "pydantic",
     "pydantic-settings",
     "python-dotenv",
+    "PyQt6",
+    "tifffile",
     "typer",
     "ultralytics",
 ]

@@ -3,10 +3,6 @@
 *.log
 *.err
 tmp/
-*data/
-*train/
-runs/
-quick-start/
 .ipynb_checkpoints/
 
 *.py[cod]
@@ -43,7 +39,5 @@ venv/
 *.png
 *.tif
 *.jpg
-*.txt
 *.pt
 *.zip
-!requirements.txt
