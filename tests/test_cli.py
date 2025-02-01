@@ -35,8 +35,23 @@ def blank_image() -> np.ndarray:
 
 
 @pytest.fixture
+def blank_grayscale_image() -> np.ndarray:
+    return np.zeros((4096, 4096), dtype=np.uint8)
+
+
+@pytest.fixture
 def blank_float32_image() -> np.ndarray:
     return np.zeros((4096, 4096, 3), dtype=np.float32)
+
+
+@pytest.fixture
+def random_image() -> np.ndarray:
+    return np.random.randint(255, size=(4096, 4096, 3), dtype=np.uint8)
+
+
+@pytest.fixture
+def random_float32_image() -> np.ndarray:
+    return np.random.random((4096, 4096, 3)).astype(np.float32)
 
 
 @pytest.fixture
@@ -63,9 +78,19 @@ def test_correct_cv_image(blank_image):
     assert (actual == blank_image).all()
 
 
-def test_correct_cv_image_normalized(blank_image, blank_float32_image):
+def test_correct_cv_image_grayscale(blank_image, blank_grayscale_image):
+    actual = correct_cv_image(blank_grayscale_image)
+    assert (actual == blank_image).all()
+
+
+def test_correct_cv_image_normalized_blank(blank_image, blank_float32_image):
     actual = correct_cv_image(blank_float32_image)
     assert (actual == blank_image).all()
+
+
+def test_correct_cv_image_normalized_random(random_float32_image):
+    actual = correct_cv_image(random_float32_image)
+    assert actual.dtype == np.uint8
 
 
 def test_read_image_file_fail_unknown_mime_type(unknown_image_file):
