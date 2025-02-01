@@ -32,9 +32,6 @@ def version_callback(value: bool):
 
 @app.callback()
 def main(
-    config_path: Optional[List[Path]] = typer.Option(
-        None, "--config-path", "-c", help="Configuration file path"
-    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -52,30 +49,6 @@ def main(
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"version={version}")
-    LOGGER.debug(f"config_path={config_path}")
-    if config_path is None:
-        config_paths = [
-            f"/etc/{__app_name__}",
-            os.path.join(
-                os.getenv("XDG_CONFIG_HOME", Path.home().joinpath(".config")),
-                __app_name__,
-            ),
-        ]
-        dotenv_config = find_dotenv()
-        LOGGER.debug(f"dotenv_config={dotenv_config}")
-        if dotenv_config:
-            config_paths.append(dotenv_config)
-    else:
-        config_paths = [c.expanduser().resolve() for c in config_path]
-    LOGGER.debug(f"config_paths={config_paths}")
-    configs = {}
-    for path in config_paths:
-        new_configs = dotenv_values(dotenv_path=path)
-        configs = configs | new_configs
-    LOGGER.debug(f"configs={configs}")
-    for k, v in configs.items():
-        if v is not None:
-            os.environ[k] = v
 
 
 if __name__ == "__main__":
