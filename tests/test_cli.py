@@ -11,8 +11,10 @@ from tstiler import __app_name__
 from tstiler.cli import (
     app,
     correct_cv_image,
+    decode_data,
     main,
     map_verbosity,
+    NPY_MIME_TYPE,
     read_image_file,
     UnknownMimeTypeError,
 )
@@ -62,6 +64,13 @@ def blank_png(blank_image, tmp_path):
 
 
 @pytest.fixture
+def blank_npy(blank_image, tmp_path):
+    npy_file = tmp_path.joinpath("image.npy")
+    np.save(npy_file, blank_image)
+    yield npy_file
+
+
+@pytest.fixture
 def unknown_image_file(blank_png):
     unknown_image_file = blank_png.with_suffix(".abc")
     os.rename(blank_png, unknown_image_file)
@@ -96,6 +105,13 @@ def test_correct_cv_image_normalized_random(random_float32_image):
 def test_read_image_file_fail_unknown_mime_type(unknown_image_file):
     with pytest.raises(UnknownMimeTypeError):
         read_image_file(unknown_image_file)
+
+
+def test_decode_data(blank_image, blank_npy):
+    with open(blank_npy, "rb+") as f:
+        data = f.read()
+    actual = decode_data(data, NPY_MIME_TYPE)
+    assert (actual == blank_image).all()
 
 
 def test_map_verbosity_false():
