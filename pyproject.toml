@@ -1,0 +1,35 @@
+[project]
+name = "tstiler"
+version = "0.1.0"
+description = "A Python Command Line Interface (CLI) application and package to run a custom merging instance segmentation tiler for ML computer vision models"
+authors = [
+    {name = "Christopher Field", email = "chris.field@theiascientific.com"},
+]
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [ "Programming Language :: Python :: 3", "Operating System :: OS Independent" ]
+dependencies = [
+    "pydantic",
+    "pydantic-settings",
+    "python-dotenv",
+    "typer",
+    "ultralytics",
+]
+
+[build-system]
+requires = [ "hatchling" ]
+build-backend = "hatchling.build"
+
+[project.optional-dependencies]
+dev = [ "build", "flake8", "hatch", "isort", "pytest", "pytest-cov", "pytest-env", "twine" ]
+
+[project.scripts]
+tstiler = "tstiler.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/Theia-Scientific/tstiler"
+"Bug Tracker" = "https://github.com/Theia-Scientific/tstiler/issues"
+
+[tool.coverage.report]
+exclude_lines = [ "if __name__ == .__main__.:" ]
+omit = [ "__main__.py" ]
