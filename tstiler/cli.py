@@ -17,6 +17,8 @@ from tstiler import __app_name__
 from typing import List, Optional, Tuple
 from ultralytics import YOLO
 
+logging.getLogger("matplotlib.font_manager").disabled = True
+
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 BIT_DEPTH_DTYPE: str = "uint8"
@@ -192,7 +194,7 @@ def main(
         elif zipfile.is_zipfile(src):
             pass
         else:
-            create_tiles(read_image_file(src), show=True)
+            create_tiles(read_image_file(src), show=verbose)
 
 
 if __name__ == "__main__":
