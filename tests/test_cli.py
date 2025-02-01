@@ -8,10 +8,12 @@ import pytest
 import torch
 import zipfile
 
+from matplotlib.figure import Figure
 from tstiler import __app_name__
 from tstiler.cli import (
     app,
     correct_cv_image,
+    create_tiles,
     decode_data,
     main,
     map_verbosity,
@@ -160,6 +162,15 @@ def test_main_directory(tmp_path, weights_file):
 
 def test_main_zip(zip_file, weights_file):
     main(weights_file, [zip_file], verbose=False, version=False)
+
+
+def test_create_tiles_show(mocker, monkeypatch, blank_image):
+
+    def mock_figure(*args, **kwargs):
+        return mocker.MagicMock(spec=Figure)
+
+    monkeypatch.setattr("matplotlib.pyplot.figure", mock_figure)
+    create_tiles(blank_image, show=True)
 
 
 def test_app_help():
