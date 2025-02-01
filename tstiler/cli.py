@@ -161,7 +161,7 @@ def create_tiles(
             )
     if show:
         plt.show()
-        LOGGER.info(f"Number of generated tiles: {count}")
+    LOGGER.info(f"Number of generated tiles: {count}")
     return data_all_crops
 
 

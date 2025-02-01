@@ -6,6 +6,7 @@ import numpy as np
 import os
 import pytest
 import torch
+import zipfile
 
 from tstiler import __app_name__
 from tstiler.cli import (
@@ -85,6 +86,16 @@ def unknown_image_file(blank_png):
     yield unknown_image_file
 
 
+@pytest.fixture
+def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
+    zip_path = tmp_path.joinpath("images.zip")
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.write(blank_png)
+        zf.write(blank_npy)
+        zf.write(blank_tif)
+    yield zip_path
+
+
 def test_read_image_file(blank_image, blank_png):
     actual = read_image_file(blank_png)
     assert (actual == blank_image).all()
@@ -139,8 +150,16 @@ def test_map_verbosity_true():
     assert actual == "DEBUG"
 
 
-def test_main(blank_png, weights_file):
+def test_main_image(blank_png, weights_file):
     main(weights_file, [blank_png], verbose=False, version=False)
+
+
+def test_main_directory(tmp_path, weights_file):
+    main(weights_file, [tmp_path], verbose=False, version=False)
+
+
+def test_main_zip(zip_file, weights_file):
+    main(weights_file, [zip_file], verbose=False, version=False)
 
 
 def test_app_help():
