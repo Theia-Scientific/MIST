@@ -136,13 +136,6 @@ def create_tiles(
         for j in range(x_steps):
             x_start = int(tile_width * j * cross_koef_x)
             y_start = int(tile_height * i * cross_koef_y)
-            # Check for residuals
-            if x_start + tile_width > src_width:
-                LOGGER.warning("Error in generating tiles along the x-axis")
-                continue
-            if y_start + tile_height > src_height:
-                LOGGER.warning("Error in generating crops along the y-axis")
-                continue
             tile_img = resized_img[
                 y_start : y_start + tile_height, x_start : x_start + tile_width
             ]
