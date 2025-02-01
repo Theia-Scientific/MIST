@@ -15,7 +15,6 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from tstiler import __app_name__
 from typing import List, Optional, Tuple
-from ultralytics import YOLO
 
 logging.getLogger("matplotlib.font_manager").disabled = True
 
@@ -184,7 +183,7 @@ def main(
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"version={version}")
-    YOLO(weights_file)
+    LOGGER.debug(f"weights_file={weights_file}")
     for source in sources:
         LOGGER.debug(f"source={sources}")
         src = source.expanduser().resolve()

@@ -1,12 +1,54 @@
 #!/usr/bin/env python3
 
+import cv2
 import importlib.metadata
+import numpy as np
+import os
+import pytest
+import torch
 
 from tstiler import __app_name__
-from tstiler.cli import app, main, map_verbosity
+from tstiler.cli import app, main, map_verbosity, read_image_file, UnknownMimeTypeError
 from typer.testing import CliRunner
 
 runner = CliRunner()
+
+
+@pytest.fixture
+def weights_file(tmp_path):
+    weights_file = tmp_path.joinpath("weights_file.pt")
+    x = torch.tensor([0, 1, 2, 3, 4])
+    torch.save(x, weights_file)
+    yield weights_file
+
+
+@pytest.fixture
+def blank_image() -> np.ndarray:
+    return np.zeros((4096, 4096, 3), dtype=np.uint8)
+
+
+@pytest.fixture
+def blank_png(blank_image, tmp_path):
+    png_file = tmp_path.joinpath("image.png")
+    cv2.imwrite(str(png_file), blank_image)
+    yield png_file
+
+
+@pytest.fixture
+def unknown_image_file(blank_png):
+    unknown_image_file = blank_png.with_suffix(".abc")
+    os.rename(blank_png, unknown_image_file)
+    yield unknown_image_file
+
+
+def test_read_image_file(blank_image, blank_png):
+    actual = read_image_file(blank_png)
+    assert (actual == blank_image).all()
+
+
+def test_read_image_file_fail_unknown_mime_type(unknown_image_file):
+    with pytest.raises(UnknownMimeTypeError):
+        read_image_file(unknown_image_file)
 
 
 def test_map_verbosity_false():
@@ -19,8 +61,8 @@ def test_map_verbosity_true():
     assert actual == "DEBUG"
 
 
-def test_main():
-    main(verbose=False, version=False)
+def test_main(blank_png, weights_file):
+    main(weights_file, [blank_png], verbose=False, version=False)
 
 
 def test_app_help():
