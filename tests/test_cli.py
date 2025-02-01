@@ -8,7 +8,14 @@ import pytest
 import torch
 
 from tstiler import __app_name__
-from tstiler.cli import app, main, map_verbosity, read_image_file, UnknownMimeTypeError
+from tstiler.cli import (
+    app,
+    correct_cv_image,
+    main,
+    map_verbosity,
+    read_image_file,
+    UnknownMimeTypeError,
+)
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -28,6 +35,11 @@ def blank_image() -> np.ndarray:
 
 
 @pytest.fixture
+def blank_float32_image() -> np.ndarray:
+    return np.zeros((4096, 4096, 3), dtype=np.float32)
+
+
+@pytest.fixture
 def blank_png(blank_image, tmp_path):
     png_file = tmp_path.joinpath("image.png")
     cv2.imwrite(str(png_file), blank_image)
@@ -43,6 +55,16 @@ def unknown_image_file(blank_png):
 
 def test_read_image_file(blank_image, blank_png):
     actual = read_image_file(blank_png)
+    assert (actual == blank_image).all()
+
+
+def test_correct_cv_image(blank_image):
+    actual = correct_cv_image(blank_image)
+    assert (actual == blank_image).all()
+
+
+def test_correct_cv_image_normalized(blank_image, blank_float32_image):
+    actual = correct_cv_image(blank_float32_image)
     assert (actual == blank_image).all()
 
 

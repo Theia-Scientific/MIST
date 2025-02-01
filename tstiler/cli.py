@@ -65,9 +65,14 @@ def correct_cv_image(src: np.ndarray) -> np.ndarray:
     if src.dtype == BIT_DEPTH_DTYPE:
         corrected_image = src
     else:
-        normalized_image = ((src - np.min(src)) / (np.max(src) - np.min(src))).astype(
-            np.float32
-        )
+        src_max = np.max(src)
+        src_min = np.min(src)
+        if src_max == src_min:
+            normalized_image = src.astype(np.float32)
+        else:
+            normalized_image = ((src - src_min) / (src_max - src_min)).astype(
+                np.float32
+            )
         corrected_image = np.round(normalized_image * 256).astype(BIT_DEPTH_DTYPE)
     if count_channels(corrected_image) < COLOR_CHANNEL_COUNT:
         three_channel_image = cv2.cvtColor(corrected_image, cv2.COLOR_GRAY2BGR)
