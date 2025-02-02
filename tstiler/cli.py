@@ -38,6 +38,38 @@ class Metric(Enum):
     IOU = "IoU"
     IOS = "IoS"
 
+    def calculate_bbox(
+        self,
+        rem_areas: torch.Tensor,
+        intersection_area: torch.Tensor,
+        areas: torch.Tensor,
+        idx: torch.Tensor,
+    ) -> torch.Tensor:
+        if self == Metric.IOU:
+            union = (rem_areas - intersection_area) + areas[idx]
+            return intersection_area / union
+        elif self == Metric.IOS:
+            smaller = torch.min(rem_areas, areas[idx])
+            return intersection_area / smaller
+        else:
+            raise ValueError("Unknown matching metric")
+
+    def calculate_mask(
+        self,
+        masks: List[np.ndarray],
+        filtered_masks: List[np.ndarray],
+        nms_threshold: float,
+        idx: torch.Tensor,
+    ) -> torch.Tensor:
+        if self == Metric.IOU:
+            mask_iou = calculate_mask_iou(masks[idx], filtered_masks)
+            return mask_iou > nms_threshold
+        elif self == Metric.IOS:
+            mask_ios = calculate_mask_ios(masks[idx], filtered_masks)
+            return mask_ios > nms_threshold
+        else:
+            raise ValueError("Unknown matching metric")
+
 
 class UnknownMimeTypeError(Exception):
     def __init__(self, file_name: str):
@@ -358,26 +390,16 @@ def apply_nms(
         intersection_height = torch.clamp(yy2 - yy1, min=0.0)
         intersection_area = intersection_width * intersection_height
         rem_areas = torch.index_select(areas, dim=0, index=order)
-        if match_metric == Metric.IOU:
-            union = (rem_areas - intersection_area) + areas[idx]
-            match_metric_value = intersection_area / union
-        elif match_metric == Metric.IOS:
-            smaller = torch.min(rem_areas, areas[idx])
-            match_metric_value = intersection_area / smaller
-        else:
-            raise ValueError("Unknown matching metric")
+        match_metric_value = match_metric.calculate_bbox(
+            rem_areas, intersection_area, areas, idx
+        )
         if len(masks) > 0 and torch.any(match_metric_value > 0):
             mask_mask = match_metric_value > 0
             order_2 = order[mask_mask]
             filtered_masks = [masks[i] for i in order_2]
-            if match_metric == Metric.IOU:
-                mask_iou = calculate_mask_iou(masks[idx], filtered_masks)
-                mask_mask = mask_iou > nms_threshold
-            elif match_metric == Metric.IOS:
-                mask_ios = calculate_mask_ios(masks[idx], filtered_masks)
-                mask_mask = mask_ios > nms_threshold
-            else:
-                raise ValueError("Unknown matching metric")
+            mask_mask = match_metric.calculate_mask(
+                masks, filtered_masks, nms_threshold, idx
+            )
             order_2 = order_2[mask_mask]
             inverse_mask = ~torch.isin(order, order_2)
             order = order[inverse_mask]
