@@ -77,7 +77,7 @@ class GlobalResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class FilteredResult(BaseModel):
+class CombineResult(BaseModel):
     boxes: List[List[int]]
     class_indices: List[int]
     masks: List[np.ndarray]
@@ -380,20 +380,20 @@ def combine_results(
     boxes: List[List[int]],
     masks: List[np.ndarray],
     class_indices: List[int],
-) -> FilteredResult:
+) -> CombineResult:
     LOGGER.info("Combining results...")
-    filtered_indices = apply_nms(torch.tensor(confidences), torch.tensor(boxes), [])
+    nms_filtered_indices = apply_nms(torch.tensor(confidences), torch.tensor(boxes), [])
     LOGGER.info("Combining results...DONE")
-    return FilteredResult(
-        boxes=[boxes[i] for i in filtered_indices],
-        class_indices=[class_indices[i] for i in filtered_indices],
-        masks=[masks[i] for i in filtered_indices],
-        scores=[confidences[i] for i in filtered_indices],
+    return CombineResult(
+        boxes=[boxes[i] for i in nms_filtered_indices],
+        class_indices=[class_indices[i] for i in nms_filtered_indices],
+        masks=[masks[i] for i in nms_filtered_indices],
+        scores=[confidences[i] for i in nms_filtered_indices],
     )
 
 
 def visualize(
-    results: FilteredResult,
+    results: CombineResult,
     img: np.ndarray,
     class_names: List[str],
     tiles: Optional[List[TileVisual]] = None,
