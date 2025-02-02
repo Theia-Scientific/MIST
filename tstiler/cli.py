@@ -263,7 +263,6 @@ def resize_result(
 def calculate_global_result(
     tile: Tile, tile_result: TileResult, src_image_size: Tuple[int, int]
 ) -> GlobalResult:
-    LOGGER.info("Calculating global result...")
     global_result = GlobalResult()
     global_x_start = tile.x_start
     global_y_start = tile.y_start
@@ -290,7 +289,6 @@ def calculate_global_result(
             global_x_start : global_x_start + tile_width,
         ] = mask_resized
         global_result.masks.append(black_image.astype(np.uint8))
-    LOGGER.info("Calculating global result...DONE")
     return global_result
 
 
@@ -522,6 +520,32 @@ def main(
     sources: List[Path] = typer.Argument(
         help="The images to run tiled inference with the weights file."
     ),
+    device: str = typer.Option("cuda:0", help="The device to use for inference."),
+    inference_confidence: float = typer.Option(
+        0.35, help="The confidence threshold as a ratio between 0.0. and 1.0."
+    ),
+    inference_iou: float = typer.Option(
+        0.7, help="The Intersection-over-Union for inference."
+    ),
+    inference_image_size: int = typer.Option(
+        640, help="The size of the image for the YOLO model."
+    ),
+    inference_max_detections: int = typer.Option(
+        1000, help="The maximum number of detections for inference."
+    ),
+    inference_silent: bool = typer.Option(
+        False, help="Silence the output for inference."
+    ),
+    overlap_height: float = typer.Option(
+        0.2,
+        help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
+    ),
+    overlap_width: float = typer.Option(
+        0.2,
+        help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
+    ),
+    tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
+    tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -553,7 +577,11 @@ def main(
             original_img = read_image_file(src)
             orig_height, orig_width, *_ = original_img.shape
             orig_size = (orig_width, orig_height)
-            tiles = create_sahi_tiles(original_img)
+            tiles = create_sahi_tiles(
+                original_img,
+                tile_size=(tile_width, tile_height),
+                overlap=(overlap_width, overlap_height),
+            )
             confidences = []
             boxes = []
             masks = []
@@ -563,21 +591,25 @@ def main(
                 results = model(
                     tile.img,
                     agnostic_nms=False,
-                    device="cuda:0",
+                    device=device,
                     classes=None,
-                    conf=0.35,
+                    conf=inference_confidence,
                     half=False,
-                    imgsz=640,
-                    iou=0.7,
-                    max_det=1000,
+                    imgsz=inference_image_size,
+                    iou=inference_iou,
+                    max_det=inference_max_detections,
                     retina_masks=True,
-                    verbose=True,
+                    verbose=not inference_silent,
                 )
                 pred = results[0]
+                if pred.masks is None:
+                    masks_data = np.zeros(tile.img.shape)
+                else:
+                    masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
                 tile_result = TileResult(
                     boxes=pred.boxes.xyxy.cpu().int().tolist(),
                     class_indices=pred.boxes.cls.cpu().int().tolist(),
-                    masks=pred.masks.data.cpu().numpy().astype(np.uint8),
+                    masks=masks_data,
                     scores=pred.boxes.conf.cpu().numpy(),
                 )
                 global_result = calculate_global_result(tile, tile_result, orig_size)
@@ -589,8 +621,8 @@ def main(
                     TileVisual(
                         x_min=tile.x_start,
                         y_min=tile.y_start,
-                        x_max=tile.x_start + 640,
-                        y_max=tile.y_start + 640,
+                        x_max=tile.x_start + tile_width,
+                        y_max=tile.y_start + tile_height,
                     )
                 )
             filtered_results = combine_results(confidences, boxes, masks, class_indices)
