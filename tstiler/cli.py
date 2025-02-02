@@ -77,6 +77,16 @@ class GlobalResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+class Instance(BaseModel):
+    box: List[int]
+    class_index: int
+    index: int
+    mask: np.ndarray
+    score: float
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 class CombineResult(BaseModel):
     boxes: List[List[int]]
     class_indices: List[int]
@@ -313,13 +323,13 @@ def calculate_mask_ios(mask: np.ndarray, masks: List[np.ndarray]) -> torch.Tenso
 
 
 def apply_nms(
-    confidences: torch.Tensor,
     boxes: torch.Tensor,
+    class_indices: torch.Tensor,
+    confidences: torch.Tensor,
     masks: List[np.ndarray],
     match_metric: Metric = Metric.IOS,
     nms_threshold: float = 0.3,
 ) -> List:
-    LOGGER.info("Applying NMS...")
     if len(boxes) == 0:
         return []
     x1 = boxes[:, 0]
@@ -359,30 +369,69 @@ def apply_nms(
             mask_mask = match_metric_value > 0
             order_2 = order[mask_mask]
             filtered_masks = [masks[i] for i in order_2]
-            if match_metric == "IOU":
+            if match_metric == Metric.IOU:
                 mask_iou = calculate_mask_iou(masks[idx], filtered_masks)
                 mask_mask = mask_iou > nms_threshold
-            elif match_metric == "IOS":
+            elif match_metric == Metric.IOS:
                 mask_ios = calculate_mask_ios(masks[idx], filtered_masks)
                 mask_mask = mask_ios > nms_threshold
+            else:
+                raise ValueError("Unknown matching metric")
             order_2 = order_2[mask_mask]
             inverse_mask = ~torch.isin(order, order_2)
             order = order[inverse_mask]
         else:
             mask = match_metric_value < nms_threshold
             order = order[mask]
-    LOGGER.info("Applying NMS...DONE")
+    if class_indices is not None:
+        keep = [class_indices[i] for i in keep]
     return keep
 
 
-def combine_results(
-    confidences: List[float],
-    boxes: List[List[int]],
+def apply_class_nms(
+    boxes: torch.Tensor,
+    class_indices: torch.Tensor,
+    confidences: torch.Tensor,
     masks: List[np.ndarray],
+    match_metric: Metric = Metric.IOS,
+    nms_threshold: float = 0.3,
+):
+    all_keeps = []
+    for cls_index in torch.unique(class_indices):
+        cls_indexes = torch.where(class_indices == cls_index)[0]
+        if len(masks) > 0:
+            class_masks = [masks[i] for i in cls_indexes]
+        else:
+            class_masks = []
+        keep_indexes = apply_nms(
+            boxes[cls_indexes],
+            cls_indexes,
+            confidences[cls_indexes],
+            class_masks,
+            match_metric,
+            nms_threshold,
+        )
+        all_keeps.extend(keep_indexes)
+    return all_keeps
+
+
+def combine_results(
+    boxes: List[List[int]],
     class_indices: List[int],
+    confidences: List[float],
+    masks: List[np.ndarray],
+    match_metric: Metric = Metric.IOS,
+    nms_threshold: float = 0.3,
 ) -> CombineResult:
     LOGGER.info("Combining results...")
-    nms_filtered_indices = apply_nms(torch.tensor(confidences), torch.tensor(boxes), [])
+    nms_filtered_indices = apply_class_nms(
+        torch.tensor(boxes),
+        torch.tensor(class_indices),
+        torch.tensor(confidences),
+        [],
+        match_metric,
+        nms_threshold,
+    )
     LOGGER.info("Combining results...DONE")
     return CombineResult(
         boxes=[boxes[i] for i in nms_filtered_indices],
@@ -625,7 +674,7 @@ def main(
                         y_max=tile.y_start + tile_height,
                     )
                 )
-            filtered_results = combine_results(confidences, boxes, masks, class_indices)
+            filtered_results = combine_results(boxes, class_indices, confidences, masks)
             visualize(
                 filtered_results,
                 original_img,
