@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import mimetypes
 import numpy as np
 import random
+import statistics
 import tifffile
 import torch
 import typer
@@ -80,9 +81,9 @@ class GlobalResult(BaseModel):
 class Instance(BaseModel):
     box: List[int]
     class_index: int
-    index: int
+    id: int
     mask: np.ndarray
-    score: float
+    scores: List[float]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -422,7 +423,7 @@ def combine_results(
     masks: List[np.ndarray],
     match_metric: Metric = Metric.IOS,
     nms_threshold: float = 0.3,
-) -> CombineResult:
+) -> List[Instance]:
     LOGGER.info("Combining results...")
     nms_filtered_indices = apply_class_nms(
         torch.tensor(boxes),
@@ -432,17 +433,55 @@ def combine_results(
         match_metric,
         nms_threshold,
     )
+    instances = []
+    instance_id = 0
+    visited = []
+    for i in nms_filtered_indices:
+        if i not in visited:
+            visited.append(i)
+            class_i = class_indices[i]
+            class_filtered_indices = [
+                c
+                for c in nms_filtered_indices
+                if class_indices[c] == class_i and c not in visited
+            ]
+            instance = Instance(
+                box=boxes[i],
+                class_index=class_i,
+                id=instance_id,
+                mask=masks[i].copy(),
+                scores=[confidences[i]],
+            )
+            for j in class_filtered_indices:
+                mask_j = masks[j]
+                intersection = np.logical_and(instance.mask, mask_j)
+                # TODO: Possibly change to IOU threshold or something
+                if intersection.sum() != 0:
+                    x_min_i, y_min_i, x_max_i, y_max_i = instance.box
+                    x_min_j, y_min_j, x_max_j, y_max_j = boxes[j]
+                    instance.box = [
+                        min(x_min_i, x_min_j),
+                        min(y_min_i, y_min_j),
+                        max(x_max_i, x_max_j),
+                        max(y_max_i, y_max_j),
+                    ]
+                    instance.mask = intersection
+                    instance.scores.append(confidences[j])
+                    visited.append(j)
+            instances.append(instance)
+            instance_id += 1
     LOGGER.info("Combining results...DONE")
-    return CombineResult(
-        boxes=[boxes[i] for i in nms_filtered_indices],
-        class_indices=[class_indices[i] for i in nms_filtered_indices],
-        masks=[masks[i] for i in nms_filtered_indices],
-        scores=[confidences[i] for i in nms_filtered_indices],
-    )
+    return instances
+    # return CombineResult(
+    #     boxes=[boxes[i] for i in nms_filtered_indices],
+    #     class_indices=[class_indices[i] for i in nms_filtered_indices],
+    #     masks=[masks[i] for i in nms_filtered_indices],
+    #     scores=[confidences[i] for i in nms_filtered_indices],
+    # )
 
 
 def visualize(
-    results: CombineResult,
+    instances: List[Instance],
     img: np.ndarray,
     class_names: List[str],
     tiles: Optional[List[TileVisual]] = None,
@@ -467,12 +506,12 @@ def visualize(
     labeled_image = img.copy()
     if random_object_colors:
         random.seed(int(delta_colors))
-    for i in range(len(results.class_indices)):
+    for instance in instances:
         if len(class_names) > 0:
-            class_name = str(class_names[results.class_indices[i]])
+            class_name = str(class_names[instance.class_index])
         else:
-            class_name = str(results.class_indices[i])
-        if show_classes_list and int(results.class_indices[i]) not in show_classes_list:
+            class_name = str(instance.class_index)
+        if show_classes_list and int(instance.class_index) not in show_classes_list:
             continue
         if random_object_colors:
             color = (
@@ -481,18 +520,18 @@ def visualize(
                 random.randint(0, 255),
             )
         elif list_of_class_colors is None:
-            random.seed(int(results.class_indices[i] + delta_colors))
+            random.seed(int(instance.class_index + delta_colors))
             color = (
                 random.randint(0, 255),
                 random.randint(0, 255),
                 random.randint(0, 255),
             )
         else:
-            color = list_of_class_colors[results.class_indices[i]]
-        box = results.boxes[i]
+            color = list_of_class_colors[instance.class_index]
+        box = instance.box
         x_min, y_min, x_max, y_max = box
-        if segment and len(results.masks) > 0:
-            mask = results.masks[i]
+        if segment:
+            mask = instance.mask
             mask_resized = cv2.resize(
                 np.array(mask),
                 (img.shape[1], img.shape[0]),
@@ -528,14 +567,14 @@ def visualize(
             )
         if show_class:
             if show_confidences:
-                label = f"{str(class_name)} {results.scores[i]:.2}"
+                label = f"{str(class_name)} {statistics.fmean(instance.scores):.2}"
             else:
                 label = str(class_name)
             (text_width, text_height), _ = cv2.getTextSize(
                 label, font, font_scale, thickness
             )
             background_color = (
-                color_class_background[results.class_indices[i]]
+                color_class_background[instance.class_index]
                 if isinstance(color_class_background, list)
                 else color_class_background
             )
@@ -674,9 +713,9 @@ def main(
                         y_max=tile.y_start + tile_height,
                     )
                 )
-            filtered_results = combine_results(boxes, class_indices, confidences, masks)
+            instances = combine_results(boxes, class_indices, confidences, masks)
             visualize(
-                filtered_results,
+                instances,
                 original_img,
                 [name for _, name in sorted(model.names.items())],
                 tiles=visual_tiles,
