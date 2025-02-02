@@ -186,9 +186,6 @@ def create_patched_tiles(
     overlap: Tuple[float, float] = (0.2, 0.2),
     show: bool = False,
 ) -> List[Tile]:
-    LOGGER.debug(f"tile_shape={tile_shape}")
-    LOGGER.debug(f"overlap={overlap}")
-    LOGGER.debug(f"show={show}")
     src_height, src_width, *_ = src_img.shape
     tile_width, tile_height = tile_shape
     overlap_x, overlap_y = overlap
@@ -196,14 +193,10 @@ def create_patched_tiles(
     cross_koef_y = 1 - overlap_y
     tiles = []
     x_steps = int((src_width - tile_width) / (tile_width * cross_koef_x)) + 1
-    LOGGER.debug(f"x_steps={x_steps}")
     y_steps = int((src_height - tile_height) / (tile_height * cross_koef_y)) + 1
-    LOGGER.debug(f"y_steps={y_steps}")
     if show:
         plt.figure(figsize=(x_steps * 0.9, y_steps * 0.9))
     count = 0
-    total_tiles = y_steps * x_steps
-    LOGGER.debug(f"total_tiles={total_tiles}")
     for i in range(y_steps):
         for j in range(x_steps):
             x_start = int(tile_width * j * cross_koef_x)
@@ -271,14 +264,11 @@ def calculate_global_result(
     tile: Tile, tile_result: TileResult, src_image_size: Tuple[int, int]
 ) -> GlobalResult:
     LOGGER.info("Calculating global result...")
-    LOGGER.debug(f"tile.x_start={tile.x_start}")
     global_result = GlobalResult()
     global_x_start = tile.x_start
     global_y_start = tile.y_start
     global_width, global_height = src_image_size
     tile_height, tile_width, *_ = tile.img.shape
-    LOGGER.debug(f"tile_height={tile_height}")
-    LOGGER.debug(f"tile_width={tile_width}")
     for bbox in tile_result.boxes:
         tile_x_min, tile_y_min, tile_x_max, tile_y_max = bbox
         global_x_min = tile_x_min + global_x_start
@@ -428,7 +418,6 @@ def visualize(
 ):
     LOGGER.info("Visualizing results...")
     labeled_image = img.copy()
-    LOGGER.debug(f"labeled_image.shape={labeled_image.shape}")
     if random_object_colors:
         random.seed(int(delta_colors))
     for i in range(len(results.class_indices)):
