@@ -13,6 +13,7 @@ import torch
 import typer
 import zipfile
 
+from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from tstiler import __app_name__
@@ -30,6 +31,11 @@ PREFIX: str = f"{__app_name__.upper()}"
 TIFF_MIME_TYPE: str = "image/tiff"
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
+
+
+class Metric(Enum):
+    IOU = "IoU"
+    IOS = "IoS"
 
 
 class UnknownMimeTypeError(Exception):
@@ -53,6 +59,15 @@ class TileResult(BaseModel):
     scores: np.ndarray
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class TileVisual(BaseModel):
+    color: Tuple[int, int, int] = (0, 0, 255)  # BGR
+    thickness: int = 3
+    x_min: int
+    y_min: int
+    x_max: int
+    y_max: int
 
 
 class GlobalResult(BaseModel):
@@ -129,12 +144,48 @@ def read_image_file(source: Path) -> np.ndarray:
     return decode_data(data, mime_type)
 
 
-def create_tiles(
+def create_sahi_tiles(
+    src_img: np.ndarray,
+    tile_size: Tuple[int, int] = (640, 640),
+    overlap: Tuple[float, float] = (0.2, 0.2),
+) -> List[Tile]:
+    image_height, image_width, *_ = src_img.shape
+    tile_width, tile_height = tile_size
+    overlap_width_ratio, overlap_height_ratio = overlap
+    tiles = []
+    y_max = y_min = 0
+    y_overlap = int(overlap_height_ratio * tile_height)
+    x_overlap = int(overlap_width_ratio * tile_width)
+    count = 0
+    while y_max < image_height:
+        x_min = x_max = 0
+        y_max = y_min + tile_height
+        while x_max < image_width:
+            x_max = x_min + tile_width
+            if y_max > image_height or x_max > image_width:
+                xmax = min(image_width, x_max)
+                ymax = min(image_height, y_max)
+                xmin = max(0, xmax - tile_width)
+                ymin = max(0, ymax - tile_height)
+            else:
+                xmax = x_max
+                ymax = y_max
+                xmin = x_min
+                ymin = y_min
+            tile_img = src_img[ymin:ymax, xmin:xmax]
+            count += 1
+            tiles.append(Tile(img=tile_img, index=count, x_start=xmin, y_start=ymin))
+            x_min = x_max - x_overlap
+        y_min = y_max - y_overlap
+    return tiles
+
+
+def create_patched_tiles(
     src_img: np.ndarray,
     tile_shape: Tuple[int, int] = (640, 640),
-    overlap: Tuple[float, float] = (0.25, 0.25),
+    overlap: Tuple[float, float] = (0.2, 0.2),
     show: bool = False,
-):
+) -> List[Tile]:
     LOGGER.debug(f"tile_shape={tile_shape}")
     LOGGER.debug(f"overlap={overlap}")
     LOGGER.debug(f"show={show}")
@@ -143,28 +194,27 @@ def create_tiles(
     overlap_x, overlap_y = overlap
     cross_koef_x = 1 - overlap_x
     cross_koef_y = 1 - overlap_y
-    data_all_crops = []
+    tiles = []
     x_steps = int((src_width - tile_width) / (tile_width * cross_koef_x)) + 1
     LOGGER.debug(f"x_steps={x_steps}")
     y_steps = int((src_height - tile_height) / (tile_height * cross_koef_y)) + 1
     LOGGER.debug(f"y_steps={y_steps}")
-    # Resizing original image to multiple of tiles. I don't think this is needed
-    # for us.
-    x_new = round((x_steps - 1) * (tile_width * cross_koef_x) + tile_width)
-    LOGGER.debug(f"x_new={x_new}")
-    y_new = round((y_steps - 1) * (tile_height * cross_koef_y) + tile_height)
-    LOGGER.debug(f"y_new={y_new}")
-    resized_img = cv2.resize(src_img, (x_new, y_new))
     if show:
         plt.figure(figsize=(x_steps * 0.9, y_steps * 0.9))
     count = 0
-    total_steps = y_steps * x_steps  # Total number of tiles
-    LOGGER.debug(f"total_steps={total_steps}")
+    total_tiles = y_steps * x_steps
+    LOGGER.debug(f"total_tiles={total_tiles}")
     for i in range(y_steps):
         for j in range(x_steps):
             x_start = int(tile_width * j * cross_koef_x)
             y_start = int(tile_height * i * cross_koef_y)
-            tile_img = resized_img[
+            if x_start + tile_width > src_width:
+                LOGGER.warning("Error in generating crops along the x-axis")
+                continue
+            if y_start + tile_height > src_height:
+                LOGGER.warning("Error in generating crops along the y-axis")
+                continue
+            tile_img = src_img[
                 y_start : y_start + tile_height, x_start : x_start + tile_width
             ]
             if show:
@@ -172,7 +222,7 @@ def create_tiles(
                 plt.imshow(cv2.cvtColor(tile_img.copy(), cv2.COLOR_BGR2RGB))
                 plt.axis("off")
             count += 1
-            data_all_crops.append(
+            tiles.append(
                 Tile(
                     img=tile_img,
                     index=count,
@@ -183,17 +233,53 @@ def create_tiles(
     if show:
         plt.show()
     LOGGER.info(f"Number of generated tiles: {count}")
-    return data_all_crops
+    return tiles
+
+
+def resize_result(
+    global_result: GlobalResult,
+    original_image_size: Tuple[int, int],
+    resized_image_size: Tuple[int, int],
+) -> GlobalResult:
+    LOGGER.info("Resizing global result...")
+    original_width, original_height = original_image_size
+    resized_width, resized_height = resized_image_size
+    resized_xyxy = []
+    resized_masks = []
+
+    for bbox in global_result.boxes:
+        # Resize bbox coordinates
+        x_min, y_min, x_max, y_max = bbox
+        x_min_resized = int(x_min * (original_width / resized_width))
+        y_min_resized = int(y_min * (original_height / resized_height))
+        x_max_resized = int(x_max * (original_width / resized_width))
+        y_max_resized = int(y_max * (original_height / resized_height))
+        resized_xyxy.append(
+            [x_min_resized, y_min_resized, x_max_resized, y_max_resized]
+        )
+    for mask in global_result.masks:
+        mask_resized = cv2.resize(
+            mask,
+            (original_width, original_height),
+            interpolation=cv2.INTER_NEAREST,
+        )
+        resized_masks.append(mask_resized.astype(np.uint8))
+    LOGGER.info("Resizing global result...DONE")
+    return GlobalResult(boxes=resized_xyxy, masks=resized_masks)
 
 
 def calculate_global_result(
     tile: Tile, tile_result: TileResult, src_image_size: Tuple[int, int]
 ) -> GlobalResult:
+    LOGGER.info("Calculating global result...")
+    LOGGER.debug(f"tile.x_start={tile.x_start}")
     global_result = GlobalResult()
     global_x_start = tile.x_start
     global_y_start = tile.y_start
     global_width, global_height = src_image_size
     tile_height, tile_width, *_ = tile.img.shape
+    LOGGER.debug(f"tile_height={tile_height}")
+    LOGGER.debug(f"tile_width={tile_width}")
     for bbox in tile_result.boxes:
         tile_x_min, tile_y_min, tile_x_max, tile_y_max = bbox
         global_x_min = tile_x_min + global_x_start
@@ -215,6 +301,7 @@ def calculate_global_result(
             global_x_start : global_x_start + tile_width,
         ] = mask_resized
         global_result.masks.append(black_image.astype(np.uint8))
+    LOGGER.info("Calculating global result...DONE")
     return global_result
 
 
@@ -231,10 +318,8 @@ def calculate_mask_iou(mask: np.ndarray, masks: List[np.ndarray]) -> torch.Tenso
 def calculate_mask_ios(mask: np.ndarray, masks: List[np.ndarray]) -> torch.Tensor:
     ios_scores = []
     for other_mask in masks:
-        # Compute intersection and area of smaller mask
         intersection = np.logical_and(mask, other_mask).sum()
         smaller_area = min(mask.sum(), other_mask.sum())
-        # Compute IoU score over smaller area, avoiding division by zero
         ios = intersection / smaller_area if smaller_area != 0 else 0
         ios_scores.append(ios)
     return torch.tensor(ios_scores)
@@ -244,7 +329,7 @@ def apply_nms(
     confidences: torch.Tensor,
     boxes: torch.Tensor,
     masks: List[np.ndarray],
-    match_metric="IOS",
+    match_metric: Metric = Metric.IOS,
     nms_threshold=0.3,
 ) -> List:
     LOGGER.info("Applying NMS...")
@@ -275,10 +360,10 @@ def apply_nms(
         intersection_height = torch.clamp(yy2 - yy1, min=0.0)
         intersection_area = intersection_width * intersection_height
         rem_areas = torch.index_select(areas, dim=0, index=order)
-        if match_metric == "IOU":
+        if match_metric == Metric.IOU:
             union = (rem_areas - intersection_area) + areas[idx]
             match_metric_value = intersection_area / union
-        elif match_metric == "IOS":
+        elif match_metric == Metric.IOS:
             smaller = torch.min(rem_areas, areas[idx])
             match_metric_value = intersection_area / smaller
         else:
@@ -310,7 +395,7 @@ def combine_results(
     class_indices: List[int],
 ) -> FilteredResult:
     LOGGER.info("Combining results...")
-    filtered_indices = apply_nms(torch.tensor(confidences), torch.tensor(boxes), masks)
+    filtered_indices = apply_nms(torch.tensor(confidences), torch.tensor(boxes), [])
     LOGGER.info("Combining results...DONE")
     return FilteredResult(
         boxes=[boxes[i] for i in filtered_indices],
@@ -324,10 +409,11 @@ def visualize(
     results: FilteredResult,
     img: np.ndarray,
     class_names=[str],
+    tiles: Optional[List[TileVisual]] = None,
     segment=True,
-    show_boxes=True,
-    show_class=True,
-    fill_mask=False,
+    show_boxes=False,
+    show_class=False,
+    fill_mask=True,
     alpha=0.3,
     color_class_background=(0, 0, 255),
     color_class_text=(255, 255, 255),
@@ -336,13 +422,14 @@ def visualize(
     font_scale=1.5,
     delta_colors=3,
     dpi=150,
-    random_object_colors=False,
+    random_object_colors=True,
     show_confidences=False,
-    axis_off=True,
     show_classes_list=[],
     list_of_class_colors=None,
 ):
+    LOGGER.info("Visualizing results...")
     labeled_image = img.copy()
+    LOGGER.debug(f"labeled_image.shape={labeled_image.shape}")
     if random_object_colors:
         random.seed(int(delta_colors))
     for i in range(len(results.class_indices)):
@@ -391,6 +478,15 @@ def visualize(
                         labeled_image, 1, color_mask, alpha, 0
                     )
             cv2.drawContours(labeled_image, mask_contours, -1, color, thickness)
+        if tiles is not None:
+            for tile in tiles:
+                cv2.rectangle(
+                    labeled_image,
+                    (tile.x_min, tile.y_min),
+                    (tile.x_max, tile.y_max),
+                    tile.color,
+                    tile.thickness,
+                )
         if show_boxes:
             cv2.rectangle(
                 labeled_image, (x_min, y_min), (x_max, y_max), color, thickness
@@ -427,9 +523,9 @@ def visualize(
     plt.figure(figsize=(8, 8), dpi=dpi)
     labeled_image = cv2.cvtColor(labeled_image, cv2.COLOR_BGR2RGB)
     plt.imshow(labeled_image)
-    if axis_off:
-        plt.axis("off")
+    plt.axis("off")
     plt.show()
+    LOGGER.info("Visualizing results...DONE")
 
 
 @app.command()
@@ -468,11 +564,13 @@ def main(
         else:
             original_img = read_image_file(src)
             orig_height, orig_width, *_ = original_img.shape
-            tiles = create_tiles(original_img, show=verbose)
+            orig_size = (orig_width, orig_height)
+            tiles = create_sahi_tiles(original_img)
             confidences = []
             boxes = []
             masks = []
             class_indices = []
+            visual_tiles = []
             for tile in tiles:
                 results = model(
                     tile.img,
@@ -494,18 +592,25 @@ def main(
                     masks=pred.masks.data.cpu().numpy().astype(np.uint8),
                     scores=pred.boxes.conf.cpu().numpy(),
                 )
-                global_result = calculate_global_result(
-                    tile, tile_result, (orig_width, orig_height)
-                )
+                global_result = calculate_global_result(tile, tile_result, orig_size)
                 confidences.extend(tile_result.scores)
                 boxes.extend(global_result.boxes)
                 masks.extend(global_result.masks)
                 class_indices.extend(tile_result.class_indices)
+                visual_tiles.append(
+                    TileVisual(
+                        x_min=tile.x_start,
+                        y_min=tile.y_start,
+                        x_max=tile.x_start + 640,
+                        y_max=tile.y_start + 640,
+                    )
+                )
             filtered_results = combine_results(confidences, boxes, masks, class_indices)
             visualize(
                 filtered_results,
                 original_img,
                 [name for _, name in sorted(model.names.items())],
+                tiles=visual_tiles,
             )
 
 
