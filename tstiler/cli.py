@@ -248,7 +248,6 @@ def resize_result(
     resized_masks = []
 
     for bbox in global_result.boxes:
-        # Resize bbox coordinates
         x_min, y_min, x_max, y_max = bbox
         x_min_resized = int(x_min * (original_width / resized_width))
         y_min_resized = int(y_min * (original_height / resized_height))
@@ -330,7 +329,7 @@ def apply_nms(
     boxes: torch.Tensor,
     masks: List[np.ndarray],
     match_metric: Metric = Metric.IOS,
-    nms_threshold=0.3,
+    nms_threshold: float = 0.3,
 ) -> List:
     LOGGER.info("Applying NMS...")
     if len(boxes) == 0:
@@ -408,20 +407,20 @@ def combine_results(
 def visualize(
     results: FilteredResult,
     img: np.ndarray,
-    class_names=[str],
+    class_names: List[str],
     tiles: Optional[List[TileVisual]] = None,
-    segment=True,
-    show_boxes=False,
-    show_class=False,
-    fill_mask=True,
-    alpha=0.3,
-    color_class_background=(0, 0, 255),
-    color_class_text=(255, 255, 255),
-    thickness=4,
+    segment: bool = True,
+    show_boxes: bool = False,
+    show_class: bool = False,
+    fill_mask: bool = True,
+    alpha: float = 0.3,
+    color_class_background: Tuple[int, int, int] = (0, 0, 255),
+    color_class_text: Tuple[int, int, int] = (255, 255, 255),
+    thickness: int = 4,
     font=cv2.FONT_HERSHEY_SIMPLEX,
-    font_scale=1.5,
-    delta_colors=3,
-    dpi=150,
+    font_scale: float = 1.5,
+    delta_colors: int = 3,
+    dpi: int = 150,
     random_object_colors=True,
     show_confidences=False,
     show_classes_list=[],
