@@ -3,16 +3,19 @@
 import cv2
 import importlib.metadata
 import io
+import json
 import logging
 import matplotlib.pyplot as plt
 import mimetypes
 import numpy as np
 import random
+import statistics
 import tifffile
 import torch
 import typer
 import zipfile
 
+from collections import Counter
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
@@ -36,6 +39,38 @@ app = typer.Typer(pretty_exceptions_show_locals=False)
 class Metric(Enum):
     IOU = "IoU"
     IOS = "IoS"
+
+    def calculate_bbox(
+        self,
+        rem_areas: torch.Tensor,
+        intersection_area: torch.Tensor,
+        areas: torch.Tensor,
+        idx: torch.Tensor,
+    ) -> torch.Tensor:
+        if self == Metric.IOU:
+            union = (rem_areas - intersection_area) + areas[idx]
+            return intersection_area / union
+        elif self == Metric.IOS:
+            smaller = torch.min(rem_areas, areas[idx])
+            return intersection_area / smaller
+        else:
+            raise ValueError("Unknown matching metric")
+
+    def calculate_mask(
+        self,
+        masks: List[np.ndarray],
+        filtered_masks: List[np.ndarray],
+        nms_threshold: float,
+        idx: torch.Tensor,
+    ) -> torch.Tensor:
+        if self == Metric.IOU:
+            mask_iou = calculate_mask_iou(masks[idx], filtered_masks)
+            return mask_iou > nms_threshold
+        elif self == Metric.IOS:
+            mask_ios = calculate_mask_ios(masks[idx], filtered_masks)
+            return mask_ios > nms_threshold
+        else:
+            raise ValueError("Unknown matching metric")
 
 
 class UnknownMimeTypeError(Exception):
@@ -77,7 +112,17 @@ class GlobalResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class FilteredResult(BaseModel):
+class Instance(BaseModel):
+    box: List[int]
+    class_index: int
+    id: int
+    mask: np.ndarray
+    scores: List[float]
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
+class CombineResult(BaseModel):
     boxes: List[List[int]]
     class_indices: List[int]
     masks: List[np.ndarray]
@@ -263,7 +308,6 @@ def resize_result(
 def calculate_global_result(
     tile: Tile, tile_result: TileResult, src_image_size: Tuple[int, int]
 ) -> GlobalResult:
-    LOGGER.info("Calculating global result...")
     global_result = GlobalResult()
     global_x_start = tile.x_start
     global_y_start = tile.y_start
@@ -290,7 +334,6 @@ def calculate_global_result(
             global_x_start : global_x_start + tile_width,
         ] = mask_resized
         global_result.masks.append(black_image.astype(np.uint8))
-    LOGGER.info("Calculating global result...DONE")
     return global_result
 
 
@@ -315,13 +358,13 @@ def calculate_mask_ios(mask: np.ndarray, masks: List[np.ndarray]) -> torch.Tenso
 
 
 def apply_nms(
-    confidences: torch.Tensor,
     boxes: torch.Tensor,
+    class_indices: torch.Tensor,
+    confidences: torch.Tensor,
     masks: List[np.ndarray],
     match_metric: Metric = Metric.IOS,
     nms_threshold: float = 0.3,
 ) -> List:
-    LOGGER.info("Applying NMS...")
     if len(boxes) == 0:
         return []
     x1 = boxes[:, 0]
@@ -349,53 +392,136 @@ def apply_nms(
         intersection_height = torch.clamp(yy2 - yy1, min=0.0)
         intersection_area = intersection_width * intersection_height
         rem_areas = torch.index_select(areas, dim=0, index=order)
-        if match_metric == Metric.IOU:
-            union = (rem_areas - intersection_area) + areas[idx]
-            match_metric_value = intersection_area / union
-        elif match_metric == Metric.IOS:
-            smaller = torch.min(rem_areas, areas[idx])
-            match_metric_value = intersection_area / smaller
-        else:
-            raise ValueError("Unknown matching metric")
+        match_metric_value = match_metric.calculate_bbox(
+            rem_areas, intersection_area, areas, idx
+        )
         if len(masks) > 0 and torch.any(match_metric_value > 0):
             mask_mask = match_metric_value > 0
             order_2 = order[mask_mask]
             filtered_masks = [masks[i] for i in order_2]
-            if match_metric == "IOU":
-                mask_iou = calculate_mask_iou(masks[idx], filtered_masks)
-                mask_mask = mask_iou > nms_threshold
-            elif match_metric == "IOS":
-                mask_ios = calculate_mask_ios(masks[idx], filtered_masks)
-                mask_mask = mask_ios > nms_threshold
+            mask_mask = match_metric.calculate_mask(
+                masks, filtered_masks, nms_threshold, idx
+            )
             order_2 = order_2[mask_mask]
             inverse_mask = ~torch.isin(order, order_2)
             order = order[inverse_mask]
         else:
             mask = match_metric_value < nms_threshold
             order = order[mask]
-    LOGGER.info("Applying NMS...DONE")
+    if class_indices is not None:
+        keep = [class_indices[i] for i in keep]
     return keep
 
 
-def combine_results(
-    confidences: List[float],
-    boxes: List[List[int]],
+def apply_class_nms(
+    boxes: torch.Tensor,
+    class_indices: torch.Tensor,
+    confidences: torch.Tensor,
     masks: List[np.ndarray],
+    match_metric: Metric = Metric.IOS,
+    nms_threshold: float = 0.3,
+):
+    all_keeps = []
+    for cls_index in torch.unique(class_indices):
+        cls_indexes = torch.where(class_indices == cls_index)[0]
+        if len(masks) > 0:
+            class_masks = [masks[i] for i in cls_indexes]
+        else:
+            class_masks = []
+        keep_indexes = apply_nms(
+            boxes[cls_indexes],
+            cls_indexes,
+            confidences[cls_indexes],
+            class_masks,
+            match_metric,
+            nms_threshold,
+        )
+        all_keeps.extend(keep_indexes)
+    return all_keeps
+
+
+def combine_results(
+    boxes: List[List[int]],
     class_indices: List[int],
-) -> FilteredResult:
+    confidences: List[float],
+    masks: List[np.ndarray],
+    match_metric: Metric = Metric.IOS,
+    merge: bool = True,
+    merge_classes: List[int] = [],
+    nms_threshold: float = 0.3,
+) -> List[Instance]:
     LOGGER.info("Combining results...")
-    filtered_indices = apply_nms(torch.tensor(confidences), torch.tensor(boxes), [])
-    LOGGER.info("Combining results...DONE")
-    return FilteredResult(
-        boxes=[boxes[i] for i in filtered_indices],
-        class_indices=[class_indices[i] for i in filtered_indices],
-        masks=[masks[i] for i in filtered_indices],
-        scores=[confidences[i] for i in filtered_indices],
+    LOGGER.info("Applying NMS...")
+    nms_filtered_indices = apply_class_nms(
+        torch.tensor(boxes),
+        torch.tensor(class_indices),
+        torch.tensor(confidences),
+        [],
+        match_metric,
+        nms_threshold,
     )
+    LOGGER.info("Applying NMS...DONE")
+    instances = []
+    instance_id = 0
+    if merge:
+        LOGGER.info("Merging instances...")
+        visited = []
+        if len(merge_classes) > 0:
+            indices_to_merge = [
+                i for i in nms_filtered_indices if class_indices[i] in merge_classes
+            ]
+        else:
+            indices_to_merge = nms_filtered_indices
+        for i in indices_to_merge:
+            if i not in visited:
+                visited.append(i)
+                class_i = class_indices[i]
+                class_filtered_indices = [
+                    c
+                    for c in nms_filtered_indices
+                    if class_indices[c] == class_i and c not in visited
+                ]
+                instance = Instance(
+                    box=boxes[i],
+                    class_index=class_i,
+                    id=instance_id,
+                    mask=masks[i].copy(),
+                    scores=[confidences[i]],
+                )
+                for j in class_filtered_indices:
+                    mask_j = masks[j]
+                    # TODO: Possibly change to IOU threshold or something
+                    if np.logical_and(instance.mask, mask_j).sum() != 0:
+                        x_min_i, y_min_i, x_max_i, y_max_i = instance.box
+                        x_min_j, y_min_j, x_max_j, y_max_j = boxes[j]
+                        instance.box = [
+                            min(x_min_i, x_min_j),
+                            min(y_min_i, y_min_j),
+                            max(x_max_i, x_max_j),
+                            max(y_max_i, y_max_j),
+                        ]
+                        instance.mask = np.logical_or(instance.mask, mask_j)
+                        instance.scores.append(confidences[j])
+                        visited.append(j)
+                instances.append(instance)
+                instance_id += 1
+        LOGGER.info("Merging instances...DONE")
+    else:
+        for i in nms_filtered_indices:
+            instance = Instance(
+                box=boxes[i],
+                class_index=class_indices[i],
+                id=instance_id,
+                mask=masks[i].copy(),
+                scores=[confidences[i]],
+            )
+            instance_id += 1
+    LOGGER.info("Combining results...DONE")
+    return instances
 
 
 def visualize(
-    results: FilteredResult,
+    instances: List[Instance],
     img: np.ndarray,
     class_names: List[str],
     tiles: Optional[List[TileVisual]] = None,
@@ -420,12 +546,12 @@ def visualize(
     labeled_image = img.copy()
     if random_object_colors:
         random.seed(int(delta_colors))
-    for i in range(len(results.class_indices)):
+    for instance in instances:
         if len(class_names) > 0:
-            class_name = str(class_names[results.class_indices[i]])
+            class_name = str(class_names[instance.class_index])
         else:
-            class_name = str(results.class_indices[i])
-        if show_classes_list and int(results.class_indices[i]) not in show_classes_list:
+            class_name = str(instance.class_index)
+        if show_classes_list and int(instance.class_index) not in show_classes_list:
             continue
         if random_object_colors:
             color = (
@@ -434,18 +560,18 @@ def visualize(
                 random.randint(0, 255),
             )
         elif list_of_class_colors is None:
-            random.seed(int(results.class_indices[i] + delta_colors))
+            random.seed(int(instance.class_index + delta_colors))
             color = (
                 random.randint(0, 255),
                 random.randint(0, 255),
                 random.randint(0, 255),
             )
         else:
-            color = list_of_class_colors[results.class_indices[i]]
-        box = results.boxes[i]
+            color = list_of_class_colors[instance.class_index]
+        box = instance.box
         x_min, y_min, x_max, y_max = box
-        if segment and len(results.masks) > 0:
-            mask = results.masks[i]
+        if segment:
+            mask = instance.mask.astype(np.uint8)
             mask_resized = cv2.resize(
                 np.array(mask),
                 (img.shape[1], img.shape[0]),
@@ -481,14 +607,14 @@ def visualize(
             )
         if show_class:
             if show_confidences:
-                label = f"{str(class_name)} {results.scores[i]:.2}"
+                label = f"{str(class_name)} {statistics.fmean(instance.scores):.2}"
             else:
                 label = str(class_name)
             (text_width, text_height), _ = cv2.getTextSize(
                 label, font, font_scale, thickness
             )
             background_color = (
-                color_class_background[results.class_indices[i]]
+                color_class_background[instance.class_index]
                 if isinstance(color_class_background, list)
                 else color_class_background
             )
@@ -522,6 +648,34 @@ def main(
     sources: List[Path] = typer.Argument(
         help="The images to run tiled inference with the weights file."
     ),
+    device: str = typer.Option("cuda:0", help="The device to use for inference."),
+    inference_confidence: float = typer.Option(
+        0.35, help="The confidence threshold as a ratio between 0.0. and 1.0."
+    ),
+    inference_iou: float = typer.Option(
+        0.7, help="The Intersection-over-Union for inference."
+    ),
+    inference_image_size: int = typer.Option(
+        640, help="The size of the image for the YOLO model."
+    ),
+    inference_max_detections: int = typer.Option(
+        1000, help="The maximum number of detections for inference."
+    ),
+    inference_silent: bool = typer.Option(
+        False, help="Silence the output for inference."
+    ),
+    merge: bool = typer.Option(True, help="Enable or disable merging instances."),
+    overlap_height: float = typer.Option(
+        0.2,
+        help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
+    ),
+    overlap_width: float = typer.Option(
+        0.2,
+        help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
+    ),
+    show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
+    tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
+    tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -553,7 +707,11 @@ def main(
             original_img = read_image_file(src)
             orig_height, orig_width, *_ = original_img.shape
             orig_size = (orig_width, orig_height)
-            tiles = create_sahi_tiles(original_img)
+            tiles = create_sahi_tiles(
+                original_img,
+                tile_size=(tile_width, tile_height),
+                overlap=(overlap_width, overlap_height),
+            )
             confidences = []
             boxes = []
             masks = []
@@ -563,21 +721,25 @@ def main(
                 results = model(
                     tile.img,
                     agnostic_nms=False,
-                    device="cuda:0",
+                    device=device,
                     classes=None,
-                    conf=0.35,
+                    conf=inference_confidence,
                     half=False,
-                    imgsz=640,
-                    iou=0.7,
-                    max_det=1000,
+                    imgsz=inference_image_size,
+                    iou=inference_iou,
+                    max_det=inference_max_detections,
                     retina_masks=True,
-                    verbose=True,
+                    verbose=not inference_silent,
                 )
                 pred = results[0]
+                if pred.masks is None:
+                    masks_data = np.zeros(tile.img.shape)
+                else:
+                    masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
                 tile_result = TileResult(
                     boxes=pred.boxes.xyxy.cpu().int().tolist(),
                     class_indices=pred.boxes.cls.cpu().int().tolist(),
-                    masks=pred.masks.data.cpu().numpy().astype(np.uint8),
+                    masks=masks_data,
                     scores=pred.boxes.conf.cpu().numpy(),
                 )
                 global_result = calculate_global_result(tile, tile_result, orig_size)
@@ -585,19 +747,30 @@ def main(
                 boxes.extend(global_result.boxes)
                 masks.extend(global_result.masks)
                 class_indices.extend(tile_result.class_indices)
-                visual_tiles.append(
-                    TileVisual(
-                        x_min=tile.x_start,
-                        y_min=tile.y_start,
-                        x_max=tile.x_start + 640,
-                        y_max=tile.y_start + 640,
+                if show_tiles:
+                    visual_tiles.append(
+                        TileVisual(
+                            x_min=tile.x_start,
+                            y_min=tile.y_start,
+                            x_max=tile.x_start + tile_width,
+                            y_max=tile.y_start + tile_height,
+                        )
                     )
-                )
-            filtered_results = combine_results(confidences, boxes, masks, class_indices)
+            instances = combine_results(
+                boxes, class_indices, confidences, masks, merge=merge
+            )
+            class_names = [name for _, name in sorted(model.names.items())]
+            LOGGER.debug(f"class_names={class_names}")
+            all_class_names = [class_names[i] for i in class_indices]
+            stats = {"unmerged": Counter(all_class_names)}
+            if merge:
+                instance_class_names = [class_names[i.class_index] for i in instances]
+                stats["merged"] = Counter(instance_class_names)
+            print(json.dumps(stats, indent=2))
             visualize(
-                filtered_results,
+                instances,
                 original_img,
-                [name for _, name in sorted(model.names.items())],
+                class_names,
                 tiles=visual_tiles,
             )
 
