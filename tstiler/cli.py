@@ -449,6 +449,7 @@ def combine_results(
     merge: bool = True,
     merge_classes: List[int] = [],
     nms_threshold: float = 0.3,
+    nms_use_masks: bool = False,
 ) -> List[Instance]:
     LOGGER.info("Combining results...")
     LOGGER.debug(f"nms_threshold={nms_threshold}")
@@ -457,7 +458,7 @@ def combine_results(
         torch.tensor(boxes),
         torch.tensor(class_indices),
         torch.tensor(confidences),
-        masks,
+        masks if nms_use_masks else [],
         match_metric,
         nms_threshold,
     )
@@ -676,6 +677,7 @@ def main(
     nms_threshold: float = typer.Option(
         0.3, help="The NMS threshold for reconstruction."
     ),
+    nms_use_masks: bool = typer.Option(False, help="Use masks in applying nms."),
     overlap_height: float = typer.Option(
         0.2,
         help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
@@ -786,6 +788,7 @@ def main(
                 merge=merge,
                 merge_classes=merge_classes,
                 nms_threshold=nms_threshold,
+                nms_use_masks=nms_use_masks,
             )
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
