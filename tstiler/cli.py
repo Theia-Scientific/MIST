@@ -445,10 +445,12 @@ def combine_results(
     confidences: List[float],
     masks: List[np.ndarray],
     match_metric: Metric = Metric.IOS,
+    merge: bool = True,
     merge_classes: List[int] = [],
     nms_threshold: float = 0.3,
 ) -> List[Instance]:
     LOGGER.info("Combining results...")
+    LOGGER.info("Applying NMS...")
     nms_filtered_indices = apply_class_nms(
         torch.tensor(boxes),
         torch.tensor(class_indices),
@@ -457,51 +459,52 @@ def combine_results(
         match_metric,
         nms_threshold,
     )
-    instances = []
-    instance_id = 0
-    visited = []
-    if len(merge_classes) > 0:
-        indices_to_merge = [
-            i for i in nms_filtered_indices if class_indices[i] in merge_classes
-        ]
-    else:
-        indices_to_merge = nms_filtered_indices
-    for i in indices_to_merge:
-        if i not in visited:
-            visited.append(i)
-            class_i = class_indices[i]
-            class_filtered_indices = [
-                c
-                for c in nms_filtered_indices
-                if class_indices[c] == class_i and c not in visited
+    LOGGER.info("Applying NMS...DONE")
+    if merge:
+        LOGGER.info("Merging instances...")
+        instances = []
+        instance_id = 0
+        visited = []
+        if len(merge_classes) > 0:
+            indices_to_merge = [
+                i for i in nms_filtered_indices if class_indices[i] in merge_classes
             ]
-            instance = Instance(
-                box=boxes[i],
-                class_index=class_i,
-                id=instance_id,
-                mask=masks[i].copy(),
-                scores=[confidences[i]],
-            )
-            for j in class_filtered_indices:
-                mask_j = masks[j]
-                # TODO: Possibly change to IOU threshold or something
-                if np.logical_and(instance.mask, mask_j).sum() != 0:
-                    LOGGER.debug("Intersection")
-                    x_min_i, y_min_i, x_max_i, y_max_i = instance.box
-                    x_min_j, y_min_j, x_max_j, y_max_j = boxes[j]
-                    instance.box = [
-                        min(x_min_i, x_min_j),
-                        min(y_min_i, y_min_j),
-                        max(x_max_i, x_max_j),
-                        max(y_max_i, y_max_j),
-                    ]
-                    instance.mask = np.logical_or(instance.mask, mask_j)
-                    instance.scores.append(confidences[j])
-                    visited.append(j)
-            instances.append(instance)
-            instance_id += 1
-    LOGGER.debug(f"len(nms_filtered_indices)={len(nms_filtered_indices)}")
-    LOGGER.debug(f"len(instances)={len(instances)}")
+        else:
+            indices_to_merge = nms_filtered_indices
+        for i in indices_to_merge:
+            if i not in visited:
+                visited.append(i)
+                class_i = class_indices[i]
+                class_filtered_indices = [
+                    c
+                    for c in nms_filtered_indices
+                    if class_indices[c] == class_i and c not in visited
+                ]
+                instance = Instance(
+                    box=boxes[i],
+                    class_index=class_i,
+                    id=instance_id,
+                    mask=masks[i].copy(),
+                    scores=[confidences[i]],
+                )
+                for j in class_filtered_indices:
+                    mask_j = masks[j]
+                    # TODO: Possibly change to IOU threshold or something
+                    if np.logical_and(instance.mask, mask_j).sum() != 0:
+                        x_min_i, y_min_i, x_max_i, y_max_i = instance.box
+                        x_min_j, y_min_j, x_max_j, y_max_j = boxes[j]
+                        instance.box = [
+                            min(x_min_i, x_min_j),
+                            min(y_min_i, y_min_j),
+                            max(x_max_i, x_max_j),
+                            max(y_max_i, y_max_j),
+                        ]
+                        instance.mask = np.logical_or(instance.mask, mask_j)
+                        instance.scores.append(confidences[j])
+                        visited.append(j)
+                instances.append(instance)
+                instance_id += 1
+        LOGGER.info("Merging instances...DONE")
     LOGGER.info("Combining results...DONE")
     return instances
 
