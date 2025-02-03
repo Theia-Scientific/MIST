@@ -762,10 +762,11 @@ def main(
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
             all_class_names = [class_names[i] for i in class_indices]
-            print(json.dumps(Counter(all_class_names), indent=2))
+            stats = {"unmerged": Counter(all_class_names)}
             if merge:
                 instance_class_names = [class_names[i.class_index] for i in instances]
-                print(json.dumps(Counter(instance_class_names), indent=2))
+                stats["merged"] = Counter(instance_class_names)
+            print(json.dumps(stats, indent=2))
             visualize(
                 instances,
                 original_img,
