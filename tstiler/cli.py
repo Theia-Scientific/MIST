@@ -362,7 +362,7 @@ def apply_nms(
     class_indices: torch.Tensor,
     confidences: torch.Tensor,
     masks: List[np.ndarray],
-    match_metric: Metric = Metric.IOS,
+    match_metric: Metric = Metric.IOU,
     nms_threshold: float = 0.3,
 ) -> List:
     if len(boxes) == 0:
@@ -457,10 +457,11 @@ def combine_results(
         torch.tensor(boxes),
         torch.tensor(class_indices),
         torch.tensor(confidences),
-        [],
+        masks,
         match_metric,
         nms_threshold,
     )
+    LOGGER.debug(f"instances count={len(nms_filtered_indices)}")
     LOGGER.info("Applying NMS...DONE")
     instances = []
     instance_id = 0
@@ -710,6 +711,7 @@ def main(
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"version={version}")
     LOGGER.debug(f"weights_file={weights_file}")
+    LOGGER.debug(f"inference_iou={inference_iou}")
     model = YOLO(weights_file)
     for source in sources:
         LOGGER.debug(f"source={sources}")
