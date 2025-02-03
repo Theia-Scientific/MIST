@@ -460,10 +460,10 @@ def combine_results(
         nms_threshold,
     )
     LOGGER.info("Applying NMS...DONE")
+    instances = []
+    instance_id = 0
     if merge:
         LOGGER.info("Merging instances...")
-        instances = []
-        instance_id = 0
         visited = []
         if len(merge_classes) > 0:
             indices_to_merge = [
@@ -505,6 +505,16 @@ def combine_results(
                 instances.append(instance)
                 instance_id += 1
         LOGGER.info("Merging instances...DONE")
+    else:
+        for i in nms_filtered_indices:
+            instance = Instance(
+                box=boxes[i],
+                class_index=class_indices[i],
+                id=instance_id,
+                mask=masks[i].copy(),
+                scores=[confidences[i]],
+            )
+            instance_id += 1
     LOGGER.info("Combining results...DONE")
     return instances
 
@@ -653,6 +663,7 @@ def main(
     inference_silent: bool = typer.Option(
         False, help="Silence the output for inference."
     ),
+    merge: bool = typer.Option(True, help="Enable or disable merging instances."),
     overlap_height: float = typer.Option(
         0.2,
         help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
@@ -744,7 +755,9 @@ def main(
                             y_max=tile.y_start + tile_height,
                         )
                     )
-            instances = combine_results(boxes, class_indices, confidences, masks)
+            instances = combine_results(
+                boxes, class_indices, confidences, masks, merge=merge
+            )
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
             all_class_names = [class_names[i] for i in class_indices]
