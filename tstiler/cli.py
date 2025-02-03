@@ -3,6 +3,7 @@
 import cv2
 import importlib.metadata
 import io
+import json
 import logging
 import matplotlib.pyplot as plt
 import mimetypes
@@ -761,9 +762,10 @@ def main(
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
             all_class_names = [class_names[i] for i in class_indices]
-            LOGGER.debug(f"Unmerged Class Counts={Counter(all_class_names)}")
-            instance_class_names = [class_names[i.class_index] for i in instances]
-            LOGGER.debug(f"Merged Class Counts={Counter(instance_class_names)}")
+            print(json.dumps(Counter(all_class_names), indent=2))
+            if merge:
+                instance_class_names = [class_names[i.class_index] for i in instances]
+                print(json.dumps(Counter(instance_class_names), indent=2))
             visualize(
                 instances,
                 original_img,
