@@ -14,6 +14,7 @@ import torch
 import typer
 import zipfile
 
+from collections import Counter
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
@@ -444,6 +445,7 @@ def combine_results(
     confidences: List[float],
     masks: List[np.ndarray],
     match_metric: Metric = Metric.IOS,
+    merge_classes: List[int] = [],
     nms_threshold: float = 0.3,
 ) -> List[Instance]:
     LOGGER.info("Combining results...")
@@ -458,7 +460,13 @@ def combine_results(
     instances = []
     instance_id = 0
     visited = []
-    for i in nms_filtered_indices:
+    if len(merge_classes) > 0:
+        indices_to_merge = [
+            i for i in nms_filtered_indices if class_indices[i] in merge_classes
+        ]
+    else:
+        indices_to_merge = nms_filtered_indices
+    for i in indices_to_merge:
         if i not in visited:
             visited.append(i)
             class_i = class_indices[i]
@@ -476,9 +484,9 @@ def combine_results(
             )
             for j in class_filtered_indices:
                 mask_j = masks[j]
-                intersection = np.logical_and(instance.mask, mask_j)
                 # TODO: Possibly change to IOU threshold or something
-                if intersection.sum() != 0:
+                if np.logical_and(instance.mask, mask_j).sum() != 0:
+                    LOGGER.debug("Intersection")
                     x_min_i, y_min_i, x_max_i, y_max_i = instance.box
                     x_min_j, y_min_j, x_max_j, y_max_j = boxes[j]
                     instance.box = [
@@ -487,19 +495,15 @@ def combine_results(
                         max(x_max_i, x_max_j),
                         max(y_max_i, y_max_j),
                     ]
-                    instance.mask = intersection
+                    instance.mask = np.logical_or(instance.mask, mask_j)
                     instance.scores.append(confidences[j])
                     visited.append(j)
             instances.append(instance)
             instance_id += 1
+    LOGGER.debug(f"len(nms_filtered_indices)={len(nms_filtered_indices)}")
+    LOGGER.debug(f"len(instances)={len(instances)}")
     LOGGER.info("Combining results...DONE")
     return instances
-    # return CombineResult(
-    #     boxes=[boxes[i] for i in nms_filtered_indices],
-    #     class_indices=[class_indices[i] for i in nms_filtered_indices],
-    #     masks=[masks[i] for i in nms_filtered_indices],
-    #     scores=[confidences[i] for i in nms_filtered_indices],
-    # )
 
 
 def visualize(
@@ -553,7 +557,7 @@ def visualize(
         box = instance.box
         x_min, y_min, x_max, y_max = box
         if segment:
-            mask = instance.mask
+            mask = instance.mask.astype(np.uint8)
             mask_resized = cv2.resize(
                 np.array(mask),
                 (img.shape[1], img.shape[0]),
@@ -654,6 +658,7 @@ def main(
         0.2,
         help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
     ),
+    show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
     tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
     tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
     verbose: bool = typer.Option(
@@ -727,19 +732,26 @@ def main(
                 boxes.extend(global_result.boxes)
                 masks.extend(global_result.masks)
                 class_indices.extend(tile_result.class_indices)
-                visual_tiles.append(
-                    TileVisual(
-                        x_min=tile.x_start,
-                        y_min=tile.y_start,
-                        x_max=tile.x_start + tile_width,
-                        y_max=tile.y_start + tile_height,
+                if show_tiles:
+                    visual_tiles.append(
+                        TileVisual(
+                            x_min=tile.x_start,
+                            y_min=tile.y_start,
+                            x_max=tile.x_start + tile_width,
+                            y_max=tile.y_start + tile_height,
+                        )
                     )
-                )
             instances = combine_results(boxes, class_indices, confidences, masks)
+            class_names = [name for _, name in sorted(model.names.items())]
+            LOGGER.debug(f"class_names={class_names}")
+            all_class_names = [class_names[i] for i in class_indices]
+            LOGGER.debug(f"Unmerged Class Counts={Counter(all_class_names)}")
+            instance_class_names = [class_names[i.class_index] for i in instances]
+            LOGGER.debug(f"Merged Class Counts={Counter(instance_class_names)}")
             visualize(
                 instances,
                 original_img,
-                [name for _, name in sorted(model.names.items())],
+                class_names,
                 tiles=visual_tiles,
             )
 
