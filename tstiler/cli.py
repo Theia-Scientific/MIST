@@ -441,7 +441,7 @@ def apply_class_nms(
     return all_keeps
 
 
-def sort_indices_left_to_right(
+def sort_indices_spatially(
     boxes: List[List[int]], unsorted_indices: List[torch.Tensor]
 ) -> List[torch.Tensor]:
     boxes_to_merge = [boxes[i] for i in unsorted_indices]
@@ -487,7 +487,7 @@ def combine_results(
             ]
         else:
             indices_to_merge = nms_filtered_indices
-        sorted_indices_to_merge = sort_indices_left_to_right(boxes, indices_to_merge)
+        sorted_indices_to_merge = sort_indices_spatially(boxes, indices_to_merge)
         visited = []
         for i in sorted_indices_to_merge:
             if i not in visited:
