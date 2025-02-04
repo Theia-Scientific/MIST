@@ -772,6 +772,10 @@ def main(
         0.2,
         help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
     ),
+    random_object_colors: bool = typer.Option(
+        False,
+        help="Use random colors for each instance; otherwise, select random color for each class.",
+    ),
     show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
     tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
     tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
@@ -886,6 +890,7 @@ def main(
                 original_img,
                 class_names,
                 tiles=visual_tiles,
+                random_object_colors=random_object_colors,
                 show_classes_list=visualize_classes,
             )
 
