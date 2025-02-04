@@ -753,7 +753,6 @@ def main(
     inference_silent: bool = typer.Option(
         False, help="Silence the output for inference."
     ),
-    merge: bool = typer.Option(True, help="Enable or disable merging instances."),
     merge_classes: List[int] = typer.Option(
         [],
         "--merge-class",
@@ -877,9 +876,8 @@ def main(
             LOGGER.debug(f"class_names={class_names}")
             all_class_names = [class_names[i] for i in class_indices]
             stats = {"unmerged": Counter(all_class_names)}
-            if merge:
-                instance_class_names = [class_names[i.class_index] for i in instances]
-                stats["merged"] = Counter(instance_class_names)
+            instance_class_names = [class_names[i.class_index] for i in instances]
+            stats["merged"] = Counter(instance_class_names)
             print(json.dumps(stats, indent=2))
             visualize(
                 instances,
