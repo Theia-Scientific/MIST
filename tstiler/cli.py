@@ -452,7 +452,7 @@ def sort_indices_spatially(
     return sorted_indices
 
 
-def combine_results(
+def combine_with_nms(
     boxes: List[List[int]],
     class_indices: List[int],
     confidences: List[float],
@@ -464,7 +464,7 @@ def combine_results(
     nms_threshold: float = 0.3,
     nms_use_masks: bool = False,
 ) -> List[Instance]:
-    LOGGER.info("Combining results...")
+    LOGGER.info("Combining with NMS...")
     LOGGER.debug(f"nms_threshold={nms_threshold}")
     LOGGER.info("Applying NMS...")
     nms_filtered_indices = apply_class_nms(
@@ -543,7 +543,68 @@ def combine_results(
             )
             instances.append(instance)
             instance_id += 1
-    LOGGER.info("Combining results...DONE")
+    LOGGER.info("Combining with NMS...DONE")
+    return instances
+
+
+def combine(
+    class_indices: List[int],
+    masks: List[np.ndarray],
+    src_image_size: Tuple[int, int],
+    dump_masks: bool = False,
+    merge_classes: List[int] = [],
+) -> List[Instance]:
+    LOGGER.info("Combining...")
+    src_image_width, src_image_height = src_image_size
+    tensor_class_indices = torch.tensor(class_indices)
+    instance_id = 0
+    instances = []
+    for cls_index in torch.unique(tensor_class_indices):
+        LOGGER.debug(f"cls_index={cls_index}")
+        if (cls_index in merge_classes and len(merge_classes) > 0) or len(
+            merge_classes
+        ) == 0:
+            if dump_masks:
+                os.makedirs(f"tmp/{cls_index}", exist_ok=True)
+            cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
+            class_masks = [masks[i] for i in cls_indexes]
+            LOGGER.debug(f"class masks count = {len(class_masks)}")
+            class_mask = np.zeros((src_image_height, src_image_width))
+            for i, mask in enumerate(class_masks):
+                class_mask = np.logical_or(class_mask, mask)
+                if dump_masks:
+                    cv2.imwrite(
+                        f"tmp/{cls_index}/{i}c.png", class_mask.astype(np.uint8) * 255
+                    )
+                    cv2.imwrite(
+                        f"tmp/{cls_index}/{i}m.png", mask.astype(np.uint8) * 255
+                    )
+            class_mask = class_mask.astype(np.uint8)
+            contours, _ = cv2.findContours(
+                class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+            LOGGER.debug(f"contours count={len(contours)}")
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                instance_mask = np.zeros(
+                    (src_image_height, src_image_width), dtype=np.uint8
+                )
+                cv2.fillPoly(instance_mask, [contour], 1)  # pyright: ignore
+                if dump_masks:
+                    cv2.imwrite(
+                        f"tmp/{cls_index}/{instance_id}i.png", instance_mask * 255
+                    )
+                instance = Instance(
+                    box=[x, y, x + w, y + h],
+                    class_index=cls_index,
+                    id=instance_id,
+                    mask=instance_mask,
+                    scores=[],
+                )
+                instances.append(instance)
+                instance_id += 1
+    LOGGER.debug(f"instances count = {len(instances)}")
+    LOGGER.info("Combining...DONE")
     return instances
 
 
@@ -605,7 +666,7 @@ def visualize(
                 interpolation=cv2.INTER_NEAREST,
             )
             mask_contours, _ = cv2.findContours(
-                mask_resized.astype(np.uint8),
+                mask_resized,
                 cv2.RETR_EXTERNAL,
                 cv2.CHAIN_APPROX_SIMPLE,
             )
@@ -694,17 +755,12 @@ def main(
     inference_silent: bool = typer.Option(
         False, help="Silence the output for inference."
     ),
-    merge: bool = typer.Option(True, help="Enable or disable merging instances."),
     merge_classes: List[int] = typer.Option(
         [],
         "--merge-class",
         "-c",
         help="Only merge instances with these class indices.",
     ),
-    nms_threshold: float = typer.Option(
-        0.3, help="The NMS threshold for reconstruction."
-    ),
-    nms_use_masks: bool = typer.Option(False, help="Use masks in applying nms."),
     overlap_height: float = typer.Option(
         0.2,
         help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
@@ -712,6 +768,10 @@ def main(
     overlap_width: float = typer.Option(
         0.2,
         help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
+    ),
+    random_object_colors: bool = typer.Option(
+        False,
+        help="Use random colors for each instance; otherwise, select random color for each class.",
     ),
     show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
     tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
@@ -807,30 +867,26 @@ def main(
                             y_max=tile.y_start + tile_height,
                         )
                     )
-            instances = combine_results(
-                boxes,
+            instances = combine(
                 class_indices,
-                confidences,
                 masks,
+                orig_size,
                 dump_masks=dump_masks,
-                merge=merge,
                 merge_classes=merge_classes,
-                nms_threshold=nms_threshold,
-                nms_use_masks=nms_use_masks,
             )
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
             all_class_names = [class_names[i] for i in class_indices]
             stats = {"unmerged": Counter(all_class_names)}
-            if merge:
-                instance_class_names = [class_names[i.class_index] for i in instances]
-                stats["merged"] = Counter(instance_class_names)
+            instance_class_names = [class_names[i.class_index] for i in instances]
+            stats["merged"] = Counter(instance_class_names)
             print(json.dumps(stats, indent=2))
             visualize(
                 instances,
                 original_img,
                 class_names,
                 tiles=visual_tiles,
+                random_object_colors=random_object_colors,
                 show_classes_list=visualize_classes,
             )
 
