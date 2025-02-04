@@ -866,17 +866,6 @@ def main(
                             y_max=tile.y_start + tile_height,
                         )
                     )
-            # instances = combine_with_nms(
-            #     boxes,
-            #     class_indices,
-            #     confidences,
-            #     masks,
-            #     dump_masks=dump_masks,
-            #     merge=merge,
-            #     merge_classes=merge_classes,
-            #     nms_threshold=nms_threshold,
-            #     nms_use_masks=nms_use_masks,
-            # )
             instances = combine(
                 class_indices,
                 masks,
