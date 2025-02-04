@@ -575,7 +575,7 @@ def combine(
                         f"tmp/{cls_index}/{i}c.png", class_mask.astype(np.uint8) * 255
                     )
                     cv2.imwrite(
-                        f"tmp/{cls_index}/{i}i.png", mask.astype(np.uint8) * 255
+                        f"tmp/{cls_index}/{i}m.png", mask.astype(np.uint8) * 255
                     )
             class_mask = class_mask.astype(np.uint8)
             contours, _ = cv2.findContours(
@@ -584,11 +584,19 @@ def combine(
             LOGGER.debug(f"contours count={len(contours)}")
             for contour in contours:
                 x, y, w, h = cv2.boundingRect(contour)
+                instance_mask = np.zeros(
+                    (src_image_height, src_image_width), dtype=np.uint8
+                )
+                cv2.fillPoly(instance_mask, [contour], 1)  # pyright: ignore
+                if dump_masks:
+                    cv2.imwrite(
+                        f"tmp/{cls_index}/{instance_id}i.png", instance_mask * 255
+                    )
                 instance = Instance(
                     box=[x, y, x + w, y + h],
                     class_index=cls_index,
                     id=instance_id,
-                    mask=class_mask,
+                    mask=instance_mask,
                     scores=[],
                 )
                 instances.append(instance)
@@ -656,7 +664,7 @@ def visualize(
                 interpolation=cv2.INTER_NEAREST,
             )
             mask_contours, _ = cv2.findContours(
-                mask_resized.astype(np.uint8),
+                mask_resized,
                 cv2.RETR_EXTERNAL,
                 cv2.CHAIN_APPROX_SIMPLE,
             )
