@@ -568,9 +568,10 @@ def combine(
         LOGGER.debug(f"cls_index={cls_index}")
         cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
         class_masks = [masks[i] for i in cls_indexes]
-        class_mask = np.zeros((src_image_height, src_image_width), dtype=np.uint8)
+        class_mask = np.zeros((src_image_height, src_image_width))
         for mask in class_masks:
             class_mask = np.logical_or(class_mask, mask)
+        class_mask = class_mask.astype(np.uint8)
         if dump_class_mask:
             cv2.imwrite(f"tmp/{cls_index}c.png", class_mask * 255)
         contours, _ = cv2.findContours(
