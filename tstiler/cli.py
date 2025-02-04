@@ -551,43 +551,48 @@ def combine(
     class_indices: List[int],
     masks: List[np.ndarray],
     src_image_size: Tuple[int, int],
-    dump_class_mask: bool = False,
+    dump_masks: bool = False,
     merge_classes: List[int] = [],
 ) -> List[Instance]:
     LOGGER.info("Combining...")
     src_image_width, src_image_height = src_image_size
-    if len(merge_classes) > 0:
-        tensor_class_indices = torch.tensor(
-            [c for c in class_indices if c in merge_classes]
-        )
-    else:
-        tensor_class_indices = torch.tensor(class_indices)
+    tensor_class_indices = torch.tensor(class_indices)
     instance_id = 0
     instances = []
     for cls_index in torch.unique(tensor_class_indices):
         LOGGER.debug(f"cls_index={cls_index}")
-        cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
-        class_masks = [masks[i] for i in cls_indexes]
-        class_mask = np.zeros((src_image_height, src_image_width))
-        for mask in class_masks:
-            class_mask = np.logical_or(class_mask, mask)
-        class_mask = class_mask.astype(np.uint8)
-        if dump_class_mask:
-            cv2.imwrite(f"tmp/{cls_index}c.png", class_mask * 255)
-        contours, _ = cv2.findContours(
-            class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-        )
-        LOGGER.debug(f"contours count={len(contours)}")
-        for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
-            instance = Instance(
-                box=[x, y, x + w, y + h],
-                class_index=cls_index,
-                id=instance_id,
-                mask=class_mask,
+        if cls_index in merge_classes and len(merge_classes) > 0:
+            if dump_masks:
+                os.makedirs(f"tmp/{cls_index}", exist_ok=True)
+            cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
+            class_masks = [masks[i] for i in cls_indexes]
+            LOGGER.debug(f"class masks count = {len(class_masks)}")
+            class_mask = np.zeros((src_image_height, src_image_width))
+            for i, mask in enumerate(class_masks):
+                class_mask = np.logical_or(class_mask, mask)
+                if dump_masks:
+                    cv2.imwrite(
+                        f"tmp/{cls_index}/{i}c.png", class_mask.astype(np.uint8) * 255
+                    )
+                    cv2.imwrite(
+                        f"tmp/{cls_index}/{i}i.png", mask.astype(np.uint8) * 255
+                    )
+            class_mask = class_mask.astype(np.uint8)
+            contours, _ = cv2.findContours(
+                class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
-            instances.append(instance)
-            instance_id += 1
+            LOGGER.debug(f"contours count={len(contours)}")
+            for contour in contours:
+                x, y, w, h = cv2.boundingRect(contour)
+                instance = Instance(
+                    box=[x, y, x + w, y + h],
+                    class_index=cls_index,
+                    id=instance_id,
+                    mask=class_mask,
+                    scores=[],
+                )
+                instances.append(instance)
+                instance_id += 1
     LOGGER.debug(f"instances count = {len(instances)}")
     LOGGER.info("Combining...DONE")
     return instances
@@ -868,7 +873,7 @@ def main(
                 class_indices,
                 masks,
                 orig_size,
-                dump_class_mask=dump_masks,
+                dump_masks=dump_masks,
                 merge_classes=merge_classes,
             )
             class_names = [name for _, name in sorted(model.names.items())]
