@@ -452,7 +452,7 @@ def sort_indices_spatially(
     return sorted_indices
 
 
-def combine_results(
+def combine_with_nms(
     boxes: List[List[int]],
     class_indices: List[int],
     confidences: List[float],
@@ -464,7 +464,7 @@ def combine_results(
     nms_threshold: float = 0.3,
     nms_use_masks: bool = False,
 ) -> List[Instance]:
-    LOGGER.info("Combining results...")
+    LOGGER.info("Combining with NMS...")
     LOGGER.debug(f"nms_threshold={nms_threshold}")
     LOGGER.info("Applying NMS...")
     nms_filtered_indices = apply_class_nms(
@@ -543,7 +543,52 @@ def combine_results(
             )
             instances.append(instance)
             instance_id += 1
-    LOGGER.info("Combining results...DONE")
+    LOGGER.info("Combining with NMS...DONE")
+    return instances
+
+
+def combine(
+    class_indices: List[int],
+    masks: List[np.ndarray],
+    src_image_size: Tuple[int, int],
+    dump_class_mask: bool = False,
+    merge_classes: List[int] = [],
+) -> List[Instance]:
+    LOGGER.info("Combining...")
+    src_image_width, src_image_height = src_image_size
+    if len(merge_classes) > 0:
+        tensor_class_indices = torch.tensor(
+            [c for c in class_indices if c in merge_classes]
+        )
+    else:
+        tensor_class_indices = torch.tensor(class_indices)
+    instance_id = 0
+    instances = []
+    for cls_index in torch.unique(tensor_class_indices):
+        LOGGER.debug(f"cls_index={cls_index}")
+        cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
+        class_masks = [masks[i] for i in cls_indexes]
+        class_mask = np.zeros((src_image_height, src_image_width), dtype=np.uint8)
+        for mask in class_masks:
+            class_mask = np.logical_or(class_mask, mask)
+        if dump_class_mask:
+            cv2.imwrite(f"tmp/{cls_index}c.png", class_mask * 255)
+        contours, _ = cv2.findContours(
+            class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
+        LOGGER.debug(f"contours count={len(contours)}")
+        for contour in contours:
+            x, y, w, h = cv2.boundingRect(contour)
+            instance = Instance(
+                box=[x, y, x + w, y + h],
+                class_index=cls_index,
+                id=instance_id,
+                mask=class_mask,
+            )
+            instances.append(instance)
+            instance_id += 1
+    LOGGER.debug(f"instances count = {len(instances)}")
+    LOGGER.info("Combining...DONE")
     return instances
 
 
@@ -807,16 +852,23 @@ def main(
                             y_max=tile.y_start + tile_height,
                         )
                     )
-            instances = combine_results(
-                boxes,
+            # instances = combine_with_nms(
+            #     boxes,
+            #     class_indices,
+            #     confidences,
+            #     masks,
+            #     dump_masks=dump_masks,
+            #     merge=merge,
+            #     merge_classes=merge_classes,
+            #     nms_threshold=nms_threshold,
+            #     nms_use_masks=nms_use_masks,
+            # )
+            instances = combine(
                 class_indices,
-                confidences,
                 masks,
-                dump_masks=dump_masks,
-                merge=merge,
+                orig_size,
+                dump_class_mask=dump_masks,
                 merge_classes=merge_classes,
-                nms_threshold=nms_threshold,
-                nms_use_masks=nms_use_masks,
             )
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
