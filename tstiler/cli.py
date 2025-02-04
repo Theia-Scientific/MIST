@@ -561,7 +561,9 @@ def combine(
     instances = []
     for cls_index in torch.unique(tensor_class_indices):
         LOGGER.debug(f"cls_index={cls_index}")
-        if cls_index in merge_classes and len(merge_classes) > 0:
+        if (cls_index in merge_classes and len(merge_classes) > 0) or len(
+            merge_classes
+        ) == 0:
             if dump_masks:
                 os.makedirs(f"tmp/{cls_index}", exist_ok=True)
             cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
