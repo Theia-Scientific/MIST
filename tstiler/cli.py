@@ -760,10 +760,6 @@ def main(
         "-c",
         help="Only merge instances with these class indices.",
     ),
-    nms_threshold: float = typer.Option(
-        0.3, help="The NMS threshold for reconstruction."
-    ),
-    nms_use_masks: bool = typer.Option(False, help="Use masks in applying nms."),
     overlap_height: float = typer.Option(
         0.2,
         help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
