@@ -38,6 +38,7 @@ venv/
 
 *.png
 *.tif
+*.tiff
 *.jpg
 *.pt
 *.zip

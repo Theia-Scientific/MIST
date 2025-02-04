@@ -362,7 +362,7 @@ def apply_nms(
     class_indices: torch.Tensor,
     confidences: torch.Tensor,
     masks: List[np.ndarray],
-    match_metric: Metric = Metric.IOS,
+    match_metric: Metric = Metric.IOU,
     nms_threshold: float = 0.3,
 ) -> List:
     if len(boxes) == 0:
@@ -449,46 +449,48 @@ def combine_results(
     merge: bool = True,
     merge_classes: List[int] = [],
     nms_threshold: float = 0.3,
+    nms_use_masks: bool = False,
 ) -> List[Instance]:
     LOGGER.info("Combining results...")
+    LOGGER.debug(f"nms_threshold={nms_threshold}")
     LOGGER.info("Applying NMS...")
     nms_filtered_indices = apply_class_nms(
         torch.tensor(boxes),
         torch.tensor(class_indices),
         torch.tensor(confidences),
-        [],
+        masks if nms_use_masks else [],
         match_metric,
         nms_threshold,
     )
+    LOGGER.debug(f"instances count={len(nms_filtered_indices)}")
     LOGGER.info("Applying NMS...DONE")
     instances = []
     instance_id = 0
     if merge:
         LOGGER.info("Merging instances...")
-        visited = []
         if len(merge_classes) > 0:
             indices_to_merge = [
                 i for i in nms_filtered_indices if class_indices[i] in merge_classes
             ]
         else:
             indices_to_merge = nms_filtered_indices
+        visited = []
         for i in indices_to_merge:
             if i not in visited:
                 visited.append(i)
-                class_i = class_indices[i]
-                class_filtered_indices = [
-                    c
-                    for c in nms_filtered_indices
-                    if class_indices[c] == class_i and c not in visited
-                ]
                 instance = Instance(
                     box=boxes[i],
-                    class_index=class_i,
+                    class_index=class_indices[i],
                     id=instance_id,
                     mask=masks[i].copy(),
                     scores=[confidences[i]],
                 )
-                for j in class_filtered_indices:
+                unvisited = [
+                    u
+                    for u in indices_to_merge
+                    if class_indices[u] == instance.class_index and u not in visited
+                ]
+                for j in unvisited:
                     mask_j = masks[j]
                     # TODO: Possibly change to IOU threshold or something
                     if np.logical_and(instance.mask, mask_j).sum() != 0:
@@ -515,6 +517,7 @@ def combine_results(
                 mask=masks[i].copy(),
                 scores=[confidences[i]],
             )
+            instances.append(instance)
             instance_id += 1
     LOGGER.info("Combining results...DONE")
     return instances
@@ -665,6 +668,16 @@ def main(
         False, help="Silence the output for inference."
     ),
     merge: bool = typer.Option(True, help="Enable or disable merging instances."),
+    merge_classes: List[int] = typer.Option(
+        [],
+        "--merge-class",
+        "-c",
+        help="Only merge instances with these class indices.",
+    ),
+    nms_threshold: float = typer.Option(
+        0.3, help="The NMS threshold for reconstruction."
+    ),
+    nms_use_masks: bool = typer.Option(False, help="Use masks in applying nms."),
     overlap_height: float = typer.Option(
         0.2,
         help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
@@ -676,6 +689,12 @@ def main(
     show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
     tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
     tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
+    visualize_classes: List[int] = typer.Option(
+        [],
+        "--visualize-class",
+        "-C",
+        help="Only visualize instances with these class indices.",
+    ),
     verbose: bool = typer.Option(
         False,
         "--verbose",
@@ -694,6 +713,7 @@ def main(
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"version={version}")
     LOGGER.debug(f"weights_file={weights_file}")
+    LOGGER.debug(f"inference_iou={inference_iou}")
     model = YOLO(weights_file)
     for source in sources:
         LOGGER.debug(f"source={sources}")
@@ -736,11 +756,15 @@ def main(
                     masks_data = np.zeros(tile.img.shape)
                 else:
                     masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
+                tile_boxes = pred.boxes.xyxy.cpu().int().tolist()
+                tile_class_indices = pred.boxes.cls.cpu().int().tolist()
+                tile_masks = masks_data
+                tile_scores = pred.boxes.conf.cpu().numpy()
                 tile_result = TileResult(
-                    boxes=pred.boxes.xyxy.cpu().int().tolist(),
-                    class_indices=pred.boxes.cls.cpu().int().tolist(),
-                    masks=masks_data,
-                    scores=pred.boxes.conf.cpu().numpy(),
+                    boxes=tile_boxes,
+                    class_indices=tile_class_indices,
+                    masks=tile_masks,
+                    scores=tile_scores,
                 )
                 global_result = calculate_global_result(tile, tile_result, orig_size)
                 confidences.extend(tile_result.scores)
@@ -757,7 +781,14 @@ def main(
                         )
                     )
             instances = combine_results(
-                boxes, class_indices, confidences, masks, merge=merge
+                boxes,
+                class_indices,
+                confidences,
+                masks,
+                merge=merge,
+                merge_classes=merge_classes,
+                nms_threshold=nms_threshold,
+                nms_use_masks=nms_use_masks,
             )
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
@@ -772,6 +803,7 @@ def main(
                 original_img,
                 class_names,
                 tiles=visual_tiles,
+                show_classes_list=visualize_classes,
             )
 
 
