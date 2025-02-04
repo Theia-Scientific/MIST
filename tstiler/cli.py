@@ -8,6 +8,7 @@ import logging
 import matplotlib.pyplot as plt
 import mimetypes
 import numpy as np
+import os
 import random
 import statistics
 import tifffile
@@ -420,7 +421,7 @@ def apply_class_nms(
     masks: List[np.ndarray],
     match_metric: Metric = Metric.IOS,
     nms_threshold: float = 0.3,
-):
+) -> List[torch.Tensor]:
     all_keeps = []
     for cls_index in torch.unique(class_indices):
         cls_indexes = torch.where(class_indices == cls_index)[0]
@@ -440,11 +441,23 @@ def apply_class_nms(
     return all_keeps
 
 
+def sort_indices_left_to_right(
+    boxes: List[List[int]], unsorted_indices: List[torch.Tensor]
+) -> List[torch.Tensor]:
+    boxes_to_merge = [boxes[i] for i in unsorted_indices]
+    boxes_and_indices = sorted(
+        zip(boxes_to_merge, unsorted_indices), key=lambda t: (t[0][0], t[0][1])
+    )
+    _, sorted_indices = list(zip(*boxes_and_indices))
+    return sorted_indices
+
+
 def combine_results(
     boxes: List[List[int]],
     class_indices: List[int],
     confidences: List[float],
     masks: List[np.ndarray],
+    dump_masks: bool = False,
     match_metric: Metric = Metric.IOS,
     merge: bool = True,
     merge_classes: List[int] = [],
@@ -474,8 +487,9 @@ def combine_results(
             ]
         else:
             indices_to_merge = nms_filtered_indices
+        sorted_indices_to_merge = sort_indices_left_to_right(boxes, indices_to_merge)
         visited = []
-        for i in indices_to_merge:
+        for i in sorted_indices_to_merge:
             if i not in visited:
                 visited.append(i)
                 instance = Instance(
@@ -487,12 +501,22 @@ def combine_results(
                 )
                 unvisited = [
                     u
-                    for u in indices_to_merge
+                    for u in sorted_indices_to_merge
                     if class_indices[u] == instance.class_index and u not in visited
                 ]
+                if dump_masks:
+                    os.makedirs(f"tmp/{instance_id}", exist_ok=True)
                 for j in unvisited:
                     mask_j = masks[j]
-                    # TODO: Possibly change to IOU threshold or something
+                    if dump_masks:
+                        cv2.imwrite(
+                            f"tmp/{instance_id}/{j}i.png",
+                            instance.mask.astype(np.uint8) * 255,
+                        )
+                        cv2.imwrite(
+                            f"tmp/{instance_id}/{j}j.png",
+                            mask_j.astype(np.uint8) * 255,
+                        )
                     if np.logical_and(instance.mask, mask_j).sum() != 0:
                         x_min_i, y_min_i, x_max_i, y_max_i = instance.box
                         x_min_j, y_min_j, x_max_j, y_max_j = boxes[j]
@@ -652,6 +676,9 @@ def main(
         help="The images to run tiled inference with the weights file."
     ),
     device: str = typer.Option("cuda:0", help="The device to use for inference."),
+    dump_masks: bool = typer.Option(
+        False, help="Creates PNGs of masks during merging."
+    ),
     inference_confidence: float = typer.Option(
         0.35, help="The confidence threshold as a ratio between 0.0. and 1.0."
     ),
@@ -785,6 +812,7 @@ def main(
                 class_indices,
                 confidences,
                 masks,
+                dump_masks=dump_masks,
                 merge=merge,
                 merge_classes=merge_classes,
                 nms_threshold=nms_threshold,
