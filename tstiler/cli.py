@@ -867,28 +867,28 @@ def main(
                             y_max=tile.y_start + tile_height,
                         )
                     )
-            # instances = combine(
-            #     class_indices,
-            #     masks,
-            #     orig_size,
-            #     dump_masks=dump_masks,
-            #     merge_classes=merge_classes,
-            # )
-            # class_names = [name for _, name in sorted(model.names.items())]
-            # LOGGER.debug(f"class_names={class_names}")
-            # all_class_names = [class_names[i] for i in class_indices]
-            # stats = {"unmerged": Counter(all_class_names)}
-            # instance_class_names = [class_names[i.class_index] for i in instances]
-            # stats["merged"] = Counter(instance_class_names)
-            # print(json.dumps(stats, indent=2))
-            # visualize(
-            #     instances,
-            #     original_img,
-            #     class_names,
-            #     tiles=visual_tiles,
-            #     random_object_colors=random_object_colors,
-            #     show_classes_list=visualize_classes,
-            # )
+            instances = combine(
+                class_indices,
+                masks,
+                orig_size,
+                dump_masks=dump_masks,
+                merge_classes=merge_classes,
+            )
+            class_names = [name for _, name in sorted(model.names.items())]
+            LOGGER.debug(f"class_names={class_names}")
+            all_class_names = [class_names[i] for i in class_indices]
+            stats = {"unmerged": Counter(all_class_names)}
+            instance_class_names = [class_names[i.class_index] for i in instances]
+            stats["merged"] = Counter(instance_class_names)
+            print(json.dumps(stats, indent=2))
+            visualize(
+                instances,
+                original_img,
+                class_names,
+                tiles=visual_tiles,
+                random_object_colors=random_object_colors,
+                show_classes_list=visualize_classes,
+            )
 
 
 if __name__ == "__main__":
