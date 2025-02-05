@@ -819,8 +819,6 @@ def main(
                 tile_size=(tile_width, tile_height),
                 overlap=(overlap_width, overlap_height),
             )
-            confidences = []
-            boxes = []
             masks = []
             class_indices = []
             visual_tiles = []
@@ -839,25 +837,16 @@ def main(
                     verbose=not inference_silent,
                 )
                 pred = results[0]
-                tile_boxes = pred.boxes.xyxy.cpu().int().tolist()
                 tile_class_indices = pred.boxes.cls.cpu().int().tolist()
+                class_indices.extend(tile_class_indices)
                 if pred.masks is None:
-                    masks_data = np.zeros((len(tile_boxes), tile_height, tile_width))
+                    masks_data = np.zeros(
+                        (len(tile_class_indices), tile_height, tile_width)
+                    )
                 else:
                     masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
-                tile_masks = masks_data
-                tile_scores = pred.boxes.conf.cpu().numpy()
-                tile_result = TileResult(
-                    boxes=tile_boxes,
-                    class_indices=tile_class_indices,
-                    masks=tile_masks,
-                    scores=tile_scores,
-                )
-                global_result = calculate_global_result(tile, tile_result, orig_size)
-                confidences.extend(tile_result.scores)
-                boxes.extend(global_result.boxes)
-                masks.extend(global_result.masks)
-                class_indices.extend(tile_result.class_indices)
+                for mask in masks_data:
+                    masks.append(mask)
                 if show_tiles:
                     visual_tiles.append(
                         TileVisual(
