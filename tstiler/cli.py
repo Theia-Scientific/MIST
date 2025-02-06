@@ -494,12 +494,10 @@ def combine(
             class_mask = np.zeros((src_image_height, src_image_width))
             LOGGER.debug(f"class_mask.shape = {class_mask.shape}")
             for i, mask in enumerate(class_masks):
-                instance_mask = np.zeros((src_image_height, src_image_width))
-                instance_mask[
+                class_mask[
                     mask.offset_y : mask.offset_y + tile_height,
                     mask.offset_x : mask.offset_x + tile_width,
-                ] = mask.data
-                class_mask = np.logical_or(class_mask, instance_mask)
+                ] += mask.data
                 if dump_masks:
                     cv2.imwrite(
                         f"tmp/{cls_index}/{i}c.png", class_mask.astype(np.uint8) * 255
