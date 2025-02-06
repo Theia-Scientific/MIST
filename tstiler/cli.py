@@ -88,15 +88,6 @@ class Tile(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class TileResult(BaseModel):
-    boxes: List[List[int]]
-    class_indices: List[int]
-    masks: np.ndarray
-    scores: np.ndarray
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
 class TileMask(BaseModel):
     data: np.ndarray
     offset_x: int
@@ -114,27 +105,11 @@ class TileVisual(BaseModel):
     y_max: int
 
 
-class GlobalResult(BaseModel):
-    boxes: List[List[int]] = []
-    masks: List[np.ndarray] = []
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
 class Instance(BaseModel):
     box: List[int]
     class_index: int
     id: int
     mask: np.ndarray
-    scores: List[float]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class CombineResult(BaseModel):
-    boxes: List[List[int]]
-    class_indices: List[int]
-    masks: List[np.ndarray]
     scores: List[float]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -281,69 +256,6 @@ def create_patched_tiles(
         plt.show()
     LOGGER.info(f"Number of generated tiles: {count}")
     return tiles
-
-
-def resize_result(
-    global_result: GlobalResult,
-    original_image_size: Tuple[int, int],
-    resized_image_size: Tuple[int, int],
-) -> GlobalResult:
-    LOGGER.info("Resizing global result...")
-    original_width, original_height = original_image_size
-    resized_width, resized_height = resized_image_size
-    resized_xyxy = []
-    resized_masks = []
-
-    for bbox in global_result.boxes:
-        x_min, y_min, x_max, y_max = bbox
-        x_min_resized = int(x_min * (original_width / resized_width))
-        y_min_resized = int(y_min * (original_height / resized_height))
-        x_max_resized = int(x_max * (original_width / resized_width))
-        y_max_resized = int(y_max * (original_height / resized_height))
-        resized_xyxy.append(
-            [x_min_resized, y_min_resized, x_max_resized, y_max_resized]
-        )
-    for mask in global_result.masks:
-        mask_resized = cv2.resize(
-            mask,
-            (original_width, original_height),
-            interpolation=cv2.INTER_NEAREST,
-        )
-        resized_masks.append(mask_resized.astype(np.uint8))
-    LOGGER.info("Resizing global result...DONE")
-    return GlobalResult(boxes=resized_xyxy, masks=resized_masks)
-
-
-def calculate_global_result(
-    tile: Tile, tile_result: TileResult, src_image_size: Tuple[int, int]
-) -> GlobalResult:
-    global_result = GlobalResult()
-    global_x_start = tile.x_start
-    global_y_start = tile.y_start
-    global_width, global_height = src_image_size
-    tile_height, tile_width, *_ = tile.img.shape
-    for bbox in tile_result.boxes:
-        tile_x_min, tile_y_min, tile_x_max, tile_y_max = bbox
-        global_x_min = tile_x_min + global_x_start
-        global_y_min = tile_y_min + global_y_start
-        global_x_max = tile_x_max + global_x_start
-        global_y_max = tile_y_max + global_y_start
-        global_result.boxes.append(
-            [global_x_min, global_y_min, global_x_max, global_y_max]
-        )
-    for mask in tile_result.masks:
-        black_image = np.zeros((global_height, global_width))
-        mask_resized = cv2.resize(
-            np.array(mask).copy(),
-            (tile_width, tile_height),
-            interpolation=cv2.INTER_NEAREST,
-        )
-        black_image[
-            global_y_start : global_y_start + tile_height,
-            global_x_start : global_x_start + tile_width,
-        ] = mask_resized
-        global_result.masks.append(black_image.astype(np.uint8))
-    return global_result
 
 
 def calculate_mask_iou(mask: np.ndarray, masks: List[np.ndarray]) -> torch.Tensor:
