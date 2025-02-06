@@ -97,6 +97,14 @@ class TileResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
+class TileMask(BaseModel):
+    data: np.ndarray
+    offset_x: int
+    offset_y: int
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 class TileVisual(BaseModel):
     color: Tuple[int, int, int] = (0, 0, 255)  # BGR
     thickness: int = 3
@@ -549,8 +557,7 @@ def combine_with_nms(
 
 def combine(
     class_indices: List[int],
-    masks: List[np.ndarray],
-    global_xy: List[Tuple[int, int]],
+    masks: List[TileMask],
     src_image_size: Tuple[int, int],
     tile_size: Tuple[int, int],
     dump_masks: bool = False,
@@ -571,28 +578,22 @@ def combine(
                 os.makedirs(f"tmp/{cls_index}", exist_ok=True)
             cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
             class_masks = [masks[i] for i in cls_indexes]
-            class_global_xy = [global_xy[i] for i in cls_indexes]
             LOGGER.debug(f"class masks count = {len(class_masks)}")
             class_mask = np.zeros((src_image_height, src_image_width))
-            for i, mask, global_xy in enumerate(zip(class_masks, class_global_xy)):
-                # class_mask = np.logical_or(class_mask, mask)
-                LOGGER.debug(f"mask.shape={mask.shape}")
-                mask_resized = cv2.resize(
-                    np.array(mask),
-                    tile_size,
-                    interpolation=cv2.INTER_NEAREST,
-                )
-                global_x, global_y = global_xy
-                class_mask[
-                    global_y : global_y + tile_height,
-                    global_x : global_x + tile_width,
-                ] = mask_resized
+            LOGGER.debug(f"class_mask.shape = {class_mask.shape}")
+            for i, mask in enumerate(class_masks):
+                instance_mask = np.zeros((src_image_height, src_image_width))
+                instance_mask[
+                    mask.offset_y : mask.offset_y + tile_height,
+                    mask.offset_x : mask.offset_x + tile_width,
+                ] = mask.data
+                class_mask = np.logical_or(class_mask, instance_mask)
                 if dump_masks:
                     cv2.imwrite(
                         f"tmp/{cls_index}/{i}c.png", class_mask.astype(np.uint8) * 255
                     )
                     cv2.imwrite(
-                        f"tmp/{cls_index}/{i}m.png", mask.astype(np.uint8) * 255
+                        f"tmp/{cls_index}/{i}m.png", mask.data.astype(np.uint8) * 255
                     )
             class_mask = class_mask.astype(np.uint8)
             contours, _ = cv2.findContours(
@@ -836,7 +837,6 @@ def main(
             )
             masks = []
             class_indices = []
-            global_xy = []
             visual_tiles = []
             for tile in tiles:
                 results = model(
@@ -861,9 +861,12 @@ def main(
                     )
                 else:
                     masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
-                for mask in masks_data:
-                    masks.append(mask)
-                global_xy.append((tile.x_start, tile.y_start))
+                for data in masks_data:
+                    masks.append(
+                        TileMask(
+                            data=data, offset_x=tile.x_start, offset_y=tile.y_start
+                        )
+                    )
                 if show_tiles:
                     visual_tiles.append(
                         TileVisual(
