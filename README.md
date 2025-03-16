@@ -1,16 +1,28 @@
-# tstiler: A command line utility and Python package for running tiled inference
+# MIST: Merging Instance Segmentation Tiler
 
-[![CI](https://github.com/Theia-Scientific/tstiler/actions/workflows/ci.yml/badge.svg)](https://github.com/Theia-Scientific/tstiler/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Theia-Scientific/tstiler/graph/badge.svg?token=Fy1sOhp76u)](https://codecov.io/gh/Theia-Scientific/tstiler)
+[![CI](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml/badge.svg)](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Theia-Scientific/mist/graph/badge.svg?token=Fy1sOhp76u)](https://codecov.io/gh/Theia-Scientific/mist)
 
-A Command Line Interface (CLI) application for running a tiled inference that
-works with bounding boxes, instance segmentations, and merges large objects
-spanning multiple tiles into single instances. Inspired by the [SAHI],
-[Patched], and [dask_relabeling] tiling inference packages.
+A Command Line Interface (CLI) application and Python package for running the
+Merging Instance Segmentation Tiler (MIST) with Machine Learning (ML) computer
+vision models. MIST creates tiles from a large image, runs inference on each
+tile, and combines, or merges, instances of the same class together using the
+instance segmentation results from inference. Non-maximum suppression (NMS) is
+_not_ used to determine overlop. Instead, each instance of a class is logically
+"anded" into a binary mask. The individual instances within a class are
+identified as contours through OpenCV's connectivity algorithm. In this manner,
+large instances that span multiple tiles are combined, or merged, into a single
+instance and small instances within the overlap region between two or more tiles
+are automatically filtered and reduced to a single instance. Only a single
+"pass" per class is required.
 
-The SAHI tiler only does bounding boxes and does not merge large instances. The
-Patched tiler does instance segmentations but does not merge large instances.
-The `dask_relabeling` package does instance segmentations and merging large
+MIST is inspired by the [Slicing Aided Hyper Inference] (SAHI), [YOLO
+Patch-Based Inference] (YPBI), and [dask_relabeling] packages. The SAHI tiler
+only does bounding boxes, does not merge large instances span multiple tiles,
+and uses NMS for instance reduction in overlap regions. The YPBI tiler does
+instance segmentations but does not merge large instances, and it performs
+multiple NMS iterations for both bounding boxes and segmentations. The
+`dask_relabeling` package does instance segmentations and merging large
 instances, but it does not work with YOLO models and GPU-powered inference.
 
 1. [Prerequisites](#prerequisites)
@@ -20,9 +32,6 @@ instances, but it does not work with YOLO models and GPU-powered inference.
    2. [pipx](#prerequisites-pipx)
       1. [Ubuntu](#prerequisites-pipx-ubuntu)
       2. [macOS](#prerequisites-pipx-macos)
-   3. [Command Line Utilities](#prerequisites-cli-apps)
-      1. [Ubuntu](#prerequisites-cli-apps-ubuntu)
-      2. [macOS](#prerequisites-cli-apps-macos)
 2. [Installation](#installation)
    1. [pipx](#installation-pipx) (recommended)
    2. [Source](#installation-source)
@@ -44,16 +53,20 @@ installed and configured once per machine.
 
 <a name="prerequisites-python"></a>
 
-The [Python] programming language is needed to run the `tstiler` Command Line
-Interface (CLI) application and/or use the `tstiler` package in other Python
-scripts or [Jupyter] notebooks. Both macOS and Ubuntu Linux have the Python
-programming language installed, but it is generally reserved for the operating
-system (OS) to use and is an older version. It is best practice to install a
-newer version that is separate from the system-provided Python version.
+The [Python] programming language is needed to run the `mist` Command Line
+Interface (CLI) application and/or use the `mist` package in other Python
+scripts or [Jupyter] notebooks. Both macOS and Linux have the Python programming
+language installed, but it is generally reserved for the operating system (OS)
+to use and is an older version. It is best practice to install a newer version
+that is separate from the system-provided Python version.
 
 #### Ubuntu
 
 <a name="prerequisites-python-ubuntu"></a>
+
+MIST was developed and tested on Ubuntu 22.04 Linux. The following steps are for
+Ubuntu Linux, but any Linux distribution can be used. The commands will be
+similar but different for other Linux distributions.
 
 1. Add the "[deadsnakes]" Ubuntu Personal Package Archives (PPA).
 
@@ -83,6 +96,9 @@ newer version that is separate from the system-provided Python version.
 
 <a name="prerequisites-python-macos"></a>
 
+MIST has been deployed and tested on a Macbook Pro laptop with a M3 Apple
+Silicon processor.
+
 1. Install [Homebrew] if it is not already installed.
 
    ```sh
@@ -100,9 +116,9 @@ newer version that is separate from the system-provided Python version.
 <a name="prerequisites-pipx"></a>
 
 The [pipx] utility enables distribution of Python-based CLI applications, like
-`tstiler`, to be installed for all users with all of the appropriate dependencies
+`mist`, to be installed for all users with all of the appropriate dependencies
 within an isolated environment. It is the recommended installation for the
-`tstiler` application.
+`mist` application.
 
 #### Ubuntu
 
@@ -173,63 +189,31 @@ command:
 ``` sh
 brew update && brew upgrade pipx
 ```
-
-### Command Line Interface Applications
-
-<a name="prerequisites-cli-apps"></a>
-
-#### Ubuntu
-
-<a name="prerequisites-cli-apps-ubuntu"></a>
-
-1. Install applications from the public repositories.
-
-   ```sh
-   sudo apt install imagemagick jq tree
-   ```
-   
-2. Get the latest version of `yq` from source.
-
-   ```sh
-   sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
-   ```
   
-#### macOS
-
-<a name="prerequisites-cli-apps-macos"></a>
-
-1. Install applications using [homebrew].
-
-   ```sh
-   brew install imagemagick jq tree yq
-   ```
-   
 ## Installation
 
 ### pipx (recommended)
 
 <a name="installation-pipx"></a>
 
-1. Download the ZIP archive of the source code. A link can be obtained from
-   Theia Scientific personnel.
-2. Ensure `pipx` is installed. See the [Prerequisites](#prerequisites).
+1. Ensure `pipx` is installed. See the [Prerequisites](#prerequisites).
 
    ```sh
    $ pipx --version
    1.7.1
    ```
    
-3. Install `tstiler` command globally for all users.
+2. Install `mist` command globally for all users.
 
    ```sh
-   sudo pipx install --global --python python3.11 "./tstiler-0.1.0.zip"
+   sudo pipx install --global --python python3.11 mist
    ```
    
-4. Verify `tstiler` command is available.
+3. Verify `mist` command is available.
 
    ```sh
-   $ tstiler --version
-   tstiler 0.1.0
+   $ mist --version
+   mist 0.1.0
    ```
    
 ### Source
@@ -239,7 +223,7 @@ brew update && brew upgrade pipx
 1. Clone this repository.
 
    ```sh
-   git clone https://github.com/Theia-Scientific/tstiler.git && cd tstiler
+   git clone https://github.com/Theia-Scientific/mist.git && cd mist
    ```
 
 2. Create a virtual environment.
@@ -273,8 +257,7 @@ brew update && brew upgrade pipx
    ```
 
 5. Locally install the package, utility, and its dependencies. This will create
-   the `tstiler` command within the virtual environment. This also installs the
-   Slack feature for sending notifications to a Slack channel.
+   the `mist` command within the virtual environment. 
 
    ```sh
    python3 -m pip install -e .
@@ -286,19 +269,17 @@ brew update && brew upgrade pipx
 
 <a name="upgrade-pipx"></a>
 
-1. Download the ZIP archive of the source code. A link can be obtained from
-   Theia Scientific personnel.
-2. Upgrade the `tstiler` application via `pipx`.
+1. Upgrade the `tstiler` application via `pipx`.
 
    ```sh
-   sudo pipx install --global --python python3.11 --force "./tstiler-0.1.0.zip"
+   sudo pipx install --global --python python3.11 --force mist
    ```
    
-3. Verify new version.
+2. Verify new version.
 
    ```sh
-   $ tstiler --version
-   tstiler 0.1.0
+   $ mist --version
+   mist 0.1.0
    ```
    
 ### Source
@@ -308,7 +289,7 @@ brew update && brew upgrade pipx
 1. Navigate to the root of the source tree.
 
    ```sh
-   cd ~/Code/tstiler
+   cd ~/Code/mist
    ```
 
 2. Activate the virtual environment.
@@ -326,7 +307,7 @@ brew update && brew upgrade pipx
    git pull
    ```
    
-4. Upgrade the `tstiler` application within the virtual environment.
+4. Upgrade the `mist` application within the virtual environment.
 
    ```sh
    python -m pip install --upgrade -e .
@@ -335,8 +316,8 @@ brew update && brew upgrade pipx
 5. Verify new version.
 
    ```sh
-   $ tstiler --version
-   tstiler 0.1.0
+   $ mist --version
+   mist 0.1.0
    ```
 
 ## Usage
@@ -352,7 +333,7 @@ TODO: Add steps
 1. Clone this repository.
 
    ```sh
-   git clone https://github.com/Theia-Scientific/tstiler.git && cd tstiler
+   git clone https://github.com/Theia-Scientific/mist.git && cd mist
    ```
 
 2. Create a virtual environment.
@@ -420,6 +401,8 @@ TODO: Add steps
 Copyright (C) 2025 Theia Scientific, LLC. All rights reserved.
 
 [dask_relabeling]: https://github.com/TheJacksonLaboratory/dask_relabeling
+[direnv]: 
 [jupyter]: https://jupyter.org/
 [patched]: https://github.com/Koldim2001/YOLO-Patch-Based-Inference
-[sahi]: https://github.com/obss/sahi
+[python]: https://www.python.org
+[slicing aided hyper inference]: https://github.com/obss/sahi
