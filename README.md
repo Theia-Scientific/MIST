@@ -40,6 +40,7 @@ instances, but it does not work with YOLO models and GPU-powered inference.
    2. [Source](#upgrade-source)
 4. [Usage](#usage)
    1. [Terminal](#usage-terminal)
+   2. [Python](#usage-python)
 5. [Contributing](#contributing)
 6. [License](#license)
 
@@ -325,6 +326,12 @@ brew update && brew upgrade pipx
 ### Terminal
 
 <a name="usage-terminal"></a>
+
+TODO: Add steps
+
+### Python
+
+<a name="usage-python"></a>
 
 TODO: Add steps
 
