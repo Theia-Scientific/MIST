@@ -17,7 +17,6 @@ import typer
 import zipfile
 
 from collections import Counter
-from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from mist import __app_name__
