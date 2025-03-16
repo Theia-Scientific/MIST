@@ -269,7 +269,7 @@ brew update && brew upgrade pipx
 
 <a name="upgrade-pipx"></a>
 
-1. Upgrade the `tstiler` application via `pipx`.
+1. Upgrade the `mist` application via `pipx`.
 
    ```sh
    sudo pipx install --global --python python3.11 --force mist
