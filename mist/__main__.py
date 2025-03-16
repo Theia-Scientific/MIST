@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from tstiler import __app_name__
-from tstiler.cli import app
+from mist import __app_name__
+from mist.cli import app
 
 app(prog_name=__app_name__)
