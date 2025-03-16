@@ -20,7 +20,7 @@ from collections import Counter
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
-from tstiler import __app_name__
+from mist import __app_name__
 from typing import List, Optional, Tuple
 from ultralytics import YOLO
 
@@ -35,43 +35,6 @@ PREFIX: str = f"{__app_name__.upper()}"
 TIFF_MIME_TYPE: str = "image/tiff"
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
-
-
-class Metric(Enum):
-    IOU = "IoU"
-    IOS = "IoS"
-
-    def calculate_bbox(
-        self,
-        rem_areas: torch.Tensor,
-        intersection_area: torch.Tensor,
-        areas: torch.Tensor,
-        idx: torch.Tensor,
-    ) -> torch.Tensor:
-        if self == Metric.IOU:
-            union = (rem_areas - intersection_area) + areas[idx]
-            return intersection_area / union
-        elif self == Metric.IOS:
-            smaller = torch.min(rem_areas, areas[idx])
-            return intersection_area / smaller
-        else:
-            raise ValueError("Unknown matching metric")
-
-    def calculate_mask(
-        self,
-        masks: List[np.ndarray],
-        filtered_masks: List[np.ndarray],
-        nms_threshold: float,
-        idx: torch.Tensor,
-    ) -> torch.Tensor:
-        if self == Metric.IOU:
-            mask_iou = calculate_mask_iou(masks[idx], filtered_masks)
-            return mask_iou > nms_threshold
-        elif self == Metric.IOS:
-            mask_ios = calculate_mask_ios(masks[idx], filtered_masks)
-            return mask_ios > nms_threshold
-        else:
-            raise ValueError("Unknown matching metric")
 
 
 class UnknownMimeTypeError(Exception):
@@ -173,7 +136,7 @@ def read_image_file(source: Path) -> np.ndarray:
     return decode_data(data, mime_type)
 
 
-def create_sahi_tiles(
+def create_tiles(
     src_img: np.ndarray,
     tile_size: Tuple[int, int] = (640, 640),
     overlap: Tuple[float, float] = (0.2, 0.2),
@@ -207,264 +170,6 @@ def create_sahi_tiles(
             x_min = x_max - x_overlap
         y_min = y_max - y_overlap
     return tiles
-
-
-def create_patched_tiles(
-    src_img: np.ndarray,
-    tile_shape: Tuple[int, int] = (640, 640),
-    overlap: Tuple[float, float] = (0.2, 0.2),
-    show: bool = False,
-) -> List[Tile]:
-    src_height, src_width, *_ = src_img.shape
-    tile_width, tile_height = tile_shape
-    overlap_x, overlap_y = overlap
-    cross_koef_x = 1 - overlap_x
-    cross_koef_y = 1 - overlap_y
-    tiles = []
-    x_steps = int((src_width - tile_width) / (tile_width * cross_koef_x)) + 1
-    y_steps = int((src_height - tile_height) / (tile_height * cross_koef_y)) + 1
-    if show:
-        plt.figure(figsize=(x_steps * 0.9, y_steps * 0.9))
-    count = 0
-    for i in range(y_steps):
-        for j in range(x_steps):
-            x_start = int(tile_width * j * cross_koef_x)
-            y_start = int(tile_height * i * cross_koef_y)
-            if x_start + tile_width > src_width:
-                LOGGER.warning("Error in generating crops along the x-axis")
-                continue
-            if y_start + tile_height > src_height:
-                LOGGER.warning("Error in generating crops along the y-axis")
-                continue
-            tile_img = src_img[
-                y_start : y_start + tile_height, x_start : x_start + tile_width
-            ]
-            if show:
-                plt.subplot(y_steps, x_steps, i * x_steps + j + 1)
-                plt.imshow(cv2.cvtColor(tile_img.copy(), cv2.COLOR_BGR2RGB))
-                plt.axis("off")
-            count += 1
-            tiles.append(
-                Tile(
-                    img=tile_img,
-                    index=count,
-                    x_start=x_start,
-                    y_start=y_start,
-                )
-            )
-    if show:
-        plt.show()
-    LOGGER.info(f"Number of generated tiles: {count}")
-    return tiles
-
-
-def calculate_mask_iou(mask: np.ndarray, masks: List[np.ndarray]) -> torch.Tensor:
-    iou_scores = []
-    for other_mask in masks:
-        intersection = np.logical_and(mask, other_mask).sum()
-        union = np.logical_or(mask, other_mask).sum()
-        iou = intersection / union if union != 0 else 0
-        iou_scores.append(iou)
-    return torch.tensor(iou_scores)
-
-
-def calculate_mask_ios(mask: np.ndarray, masks: List[np.ndarray]) -> torch.Tensor:
-    ios_scores = []
-    for other_mask in masks:
-        intersection = np.logical_and(mask, other_mask).sum()
-        smaller_area = min(mask.sum(), other_mask.sum())
-        ios = intersection / smaller_area if smaller_area != 0 else 0
-        ios_scores.append(ios)
-    return torch.tensor(ios_scores)
-
-
-def apply_nms(
-    boxes: torch.Tensor,
-    class_indices: torch.Tensor,
-    confidences: torch.Tensor,
-    masks: List[np.ndarray],
-    match_metric: Metric = Metric.IOU,
-    nms_threshold: float = 0.3,
-) -> List:
-    if len(boxes) == 0:
-        return []
-    x1 = boxes[:, 0]
-    y1 = boxes[:, 1]
-    x2 = boxes[:, 2]
-    y2 = boxes[:, 3]
-    areas = (x2 - x1) * (y2 - y1)
-    order = confidences.argsort()
-    keep = []
-    while len(order) > 0:
-        idx = order[-1]
-        keep.append(idx.tolist())
-        order = order[:-1]
-        if len(order) == 0:
-            break
-        xx1 = torch.index_select(x1, dim=0, index=order)
-        yy1 = torch.index_select(y1, dim=0, index=order)
-        xx2 = torch.index_select(x2, dim=0, index=order)
-        yy2 = torch.index_select(y2, dim=0, index=order)
-        xx1 = torch.max(xx1, x1[idx])
-        yy1 = torch.max(yy1, y1[idx])
-        xx2 = torch.min(xx2, x2[idx])
-        yy2 = torch.min(yy2, y2[idx])
-        intersection_width = torch.clamp(xx2 - xx1, min=0.0)
-        intersection_height = torch.clamp(yy2 - yy1, min=0.0)
-        intersection_area = intersection_width * intersection_height
-        rem_areas = torch.index_select(areas, dim=0, index=order)
-        match_metric_value = match_metric.calculate_bbox(
-            rem_areas, intersection_area, areas, idx
-        )
-        if len(masks) > 0 and torch.any(match_metric_value > 0):
-            mask_mask = match_metric_value > 0
-            order_2 = order[mask_mask]
-            filtered_masks = [masks[i] for i in order_2]
-            mask_mask = match_metric.calculate_mask(
-                masks, filtered_masks, nms_threshold, idx
-            )
-            order_2 = order_2[mask_mask]
-            inverse_mask = ~torch.isin(order, order_2)
-            order = order[inverse_mask]
-        else:
-            mask = match_metric_value < nms_threshold
-            order = order[mask]
-    if class_indices is not None:
-        keep = [class_indices[i] for i in keep]
-    return keep
-
-
-def apply_class_nms(
-    boxes: torch.Tensor,
-    class_indices: torch.Tensor,
-    confidences: torch.Tensor,
-    masks: List[np.ndarray],
-    match_metric: Metric = Metric.IOS,
-    nms_threshold: float = 0.3,
-) -> List[torch.Tensor]:
-    all_keeps = []
-    for cls_index in torch.unique(class_indices):
-        cls_indexes = torch.where(class_indices == cls_index)[0]
-        if len(masks) > 0:
-            class_masks = [masks[i] for i in cls_indexes]
-        else:
-            class_masks = []
-        keep_indexes = apply_nms(
-            boxes[cls_indexes],
-            cls_indexes,
-            confidences[cls_indexes],
-            class_masks,
-            match_metric,
-            nms_threshold,
-        )
-        all_keeps.extend(keep_indexes)
-    return all_keeps
-
-
-def sort_indices_spatially(
-    boxes: List[List[int]], unsorted_indices: List[torch.Tensor]
-) -> List[torch.Tensor]:
-    boxes_to_merge = [boxes[i] for i in unsorted_indices]
-    boxes_and_indices = sorted(
-        zip(boxes_to_merge, unsorted_indices), key=lambda t: (t[0][0], t[0][1])
-    )
-    _, sorted_indices = list(zip(*boxes_and_indices))
-    return sorted_indices
-
-
-def combine_with_nms(
-    boxes: List[List[int]],
-    class_indices: List[int],
-    confidences: List[float],
-    masks: List[np.ndarray],
-    dump_masks: bool = False,
-    match_metric: Metric = Metric.IOS,
-    merge: bool = True,
-    merge_classes: List[int] = [],
-    nms_threshold: float = 0.3,
-    nms_use_masks: bool = False,
-) -> List[Instance]:
-    LOGGER.info("Combining with NMS...")
-    LOGGER.debug(f"nms_threshold={nms_threshold}")
-    LOGGER.info("Applying NMS...")
-    nms_filtered_indices = apply_class_nms(
-        torch.tensor(boxes),
-        torch.tensor(class_indices),
-        torch.tensor(confidences),
-        masks if nms_use_masks else [],
-        match_metric,
-        nms_threshold,
-    )
-    LOGGER.debug(f"instances count={len(nms_filtered_indices)}")
-    LOGGER.info("Applying NMS...DONE")
-    instances = []
-    instance_id = 0
-    if merge:
-        LOGGER.info("Merging instances...")
-        if len(merge_classes) > 0:
-            indices_to_merge = [
-                i for i in nms_filtered_indices if class_indices[i] in merge_classes
-            ]
-        else:
-            indices_to_merge = nms_filtered_indices
-        sorted_indices_to_merge = sort_indices_spatially(boxes, indices_to_merge)
-        visited = []
-        for i in sorted_indices_to_merge:
-            if i not in visited:
-                visited.append(i)
-                instance = Instance(
-                    box=boxes[i],
-                    class_index=class_indices[i],
-                    id=instance_id,
-                    mask=masks[i].copy(),
-                    scores=[confidences[i]],
-                )
-                unvisited = [
-                    u
-                    for u in sorted_indices_to_merge
-                    if class_indices[u] == instance.class_index and u not in visited
-                ]
-                if dump_masks:
-                    os.makedirs(f"tmp/{instance_id}", exist_ok=True)
-                for j in unvisited:
-                    mask_j = masks[j]
-                    if dump_masks:
-                        cv2.imwrite(
-                            f"tmp/{instance_id}/{j}i.png",
-                            instance.mask.astype(np.uint8) * 255,
-                        )
-                        cv2.imwrite(
-                            f"tmp/{instance_id}/{j}j.png",
-                            mask_j.astype(np.uint8) * 255,
-                        )
-                    if np.logical_and(instance.mask, mask_j).sum() != 0:
-                        x_min_i, y_min_i, x_max_i, y_max_i = instance.box
-                        x_min_j, y_min_j, x_max_j, y_max_j = boxes[j]
-                        instance.box = [
-                            min(x_min_i, x_min_j),
-                            min(y_min_i, y_min_j),
-                            max(x_max_i, x_max_j),
-                            max(y_max_i, y_max_j),
-                        ]
-                        instance.mask = np.logical_or(instance.mask, mask_j)
-                        instance.scores.append(confidences[j])
-                        visited.append(j)
-                instances.append(instance)
-                instance_id += 1
-        LOGGER.info("Merging instances...DONE")
-    else:
-        for i in nms_filtered_indices:
-            instance = Instance(
-                box=boxes[i],
-                class_index=class_indices[i],
-                id=instance_id,
-                mask=masks[i].copy(),
-                scores=[confidences[i]],
-            )
-            instances.append(instance)
-            instance_id += 1
-    LOGGER.info("Combining with NMS...DONE")
-    return instances
 
 
 def combine(
@@ -704,7 +409,7 @@ def main(
     tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
     visualize_classes: List[int] = typer.Option(
         [],
-        "--visualize-class",
+        "--visualize-classes",
         "-C",
         help="Only visualize instances with these class indices.",
     ),
@@ -740,7 +445,7 @@ def main(
             original_img = read_image_file(src)
             orig_height, orig_width, *_ = original_img.shape
             orig_size = (orig_width, orig_height)
-            tiles = create_sahi_tiles(
+            tiles = create_tiles(
                 original_img,
                 tile_size=(tile_width, tile_height),
                 overlap=(overlap_width, overlap_height),
