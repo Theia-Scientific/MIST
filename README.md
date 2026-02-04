@@ -18,9 +18,9 @@ are automatically filtered and reduced to a single instance. Only a single
 
 MIST is inspired by the [Slicing Aided Hyper Inference] (SAHI), [YOLO
 Patch-Based Inference] (YPBI), and [dask_relabeling] packages. The SAHI tiler
-only does bounding boxes, does not merge large instances span multiple tiles,
-and uses NMS for instance reduction in overlap regions. The YPBI tiler does
-instance segmentations but does not merge large instances, and it performs
+only does bounding boxes, does not merge large instances spanning multiple
+tiles, and uses NMS for instance reduction in overlap regions. The YPBI tiler
+does instance segmentations but does not merge large instances, and it performs
 multiple NMS iterations for both bounding boxes and segmentations. The
 `dask_relabeling` package does instance segmentations and merging large
 instances, but it does not work with YOLO models and GPU-powered inference.
@@ -408,7 +408,7 @@ TODO: Add steps
 Copyright (C) 2025 Theia Scientific, LLC. All rights reserved.
 
 [dask_relabeling]: https://github.com/TheJacksonLaboratory/dask_relabeling
-[direnv]: 
+[direnv]: https://direnv.net/
 [jupyter]: https://jupyter.org/
 [patched]: https://github.com/Koldim2001/YOLO-Patch-Based-Inference
 [python]: https://www.python.org
