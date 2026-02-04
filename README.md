@@ -409,6 +409,6 @@ Copyright (C) 2025 Theia Scientific, LLC. All rights reserved.
 [dask_relabeling]: https://github.com/TheJacksonLaboratory/dask_relabeling
 [direnv]: https://direnv.net/
 [jupyter]: https://jupyter.org/
-[patched]: https://github.com/Koldim2001/YOLO-Patch-Based-Inference
+[yolo patch-based inference]: https://github.com/Koldim2001/YOLO-Patch-Based-Inference
 [python]: https://www.python.org
 [slicing aided hyper inference]: https://github.com/obss/sahi
