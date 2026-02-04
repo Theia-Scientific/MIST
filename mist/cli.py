@@ -21,7 +21,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from mist import __app_name__
 from typing import List, Optional, Tuple
-from ultralytics import YOLO
+from ultralytics.models import YOLO
 
 logging.getLogger("matplotlib.font_manager").disabled = True
 
