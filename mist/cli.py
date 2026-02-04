@@ -41,6 +41,10 @@ class UnknownMimeTypeError(Exception):
         self.file_name = file_name
 
 
+class ImageDecodeError(Exception):
+    pass
+
+
 class Tile(BaseModel):
     img: np.ndarray
     index: int
@@ -121,9 +125,10 @@ def decode_data(data: bytes, mime_type: str) -> np.ndarray:
     elif mime_type == TIFF_MIME_TYPE:
         return correct_cv_image(tifffile.imread(io.BytesIO(data)))
     else:
-        return correct_cv_image(
-            cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_UNCHANGED)
-        )
+        src = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_UNCHANGED)
+        if src is None:
+            raise ImageDecodeError()
+        return correct_cv_image(src)
 
 
 def read_image_file(source: Path) -> np.ndarray:
