@@ -1,15 +1,31 @@
 [project]
-name = "tstiler"
+name = "mist"
 version = "0.1.0"
-description = "A Python Command Line Interface (CLI) application and package to run a custom merging instance segmentation tiler for ML computer vision models"
+description = "A Python Command Line Interface (CLI) application and package to run the Merging Instance Segmentation Tiler (MIST) with ML computer vision models"
 authors = [
     {name = "Christopher Field", email = "chris.field@theiascientific.com"},
 ]
 readme = "README.md"
 requires-python = ">=3.11"
-classifiers = [ "Programming Language :: Python :: 3", "Operating System :: OS Independent" ]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Environment :: GPU",
+    "Framework :: Pydantic",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Image Recognition",
+]
 dependencies = [
     "imagecodecs",
+    "opencv-python",
     "pydantic",
     "pydantic-settings",
     "python-dotenv",
@@ -24,14 +40,25 @@ requires = [ "hatchling" ]
 build-backend = "hatchling.build"
 
 [project.optional-dependencies]
-dev = [ "build", "flake8", "hatch", "isort", "pytest", "pytest-cov", "pytest-env", "pytest-mock", "twine" ]
+dev = [
+    "build",
+    "flake8",
+    "hatch",
+    "isort",
+    "pytest",
+    "pytest-cov",
+    "pytest-env",
+    "pytest-mock",
+    "twine"
+]
 
 [project.scripts]
-tstiler = "tstiler.cli:app"
+mist = "mist.cli:app"
 
 [project.urls]
-Homepage = "https://github.com/Theia-Scientific/tstiler"
-"Bug Tracker" = "https://github.com/Theia-Scientific/tstiler/issues"
+Homepage = "https://github.com/Theia-Scientific/mist"
+Source = "https://github.com/Theia-Scientific/mist"
+Tracker = "https://github.com/Theia-Scientific/mist/issues"
 
 [tool.coverage.report]
 exclude_lines = [ "if __name__ == .__main__.:" ]

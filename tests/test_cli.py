@@ -5,17 +5,15 @@ import importlib.metadata
 import numpy as np
 import os
 import pytest
-import torch
 import zipfile
 
 from matplotlib.figure import Figure
-from tstiler import __app_name__
-from tstiler.cli import (
+from mist import __app_name__
+from mist.cli import (
     app,
     correct_cv_image,
     create_tiles,
     decode_data,
-    main,
     map_verbosity,
     NPY_MIME_TYPE,
     read_image_file,
@@ -23,16 +21,22 @@ from tstiler.cli import (
     UnknownMimeTypeError,
 )
 from typer.testing import CliRunner
+from ultralytics.utils.downloads import attempt_download_asset
 
 runner = CliRunner()
 
 
-@pytest.fixture
-def weights_file(tmp_path):
-    weights_file = tmp_path.joinpath("weights_file.pt")
-    x = torch.tensor([0, 1, 2, 3, 4])
-    torch.save(x, weights_file)
-    yield weights_file
+@pytest.fixture(scope="session")
+def assets(tmp_path_factory):
+    return tmp_path_factory.mktemp("assets")
+
+
+@pytest.fixture(scope="session")
+def weights_file(assets):
+    weights_file = attempt_download_asset(
+        "weights/yolov8n-seg.pt", dir=assets, progress=False
+    )
+    return assets.joinpath(weights_file)
 
 
 @pytest.fixture
@@ -152,25 +156,14 @@ def test_map_verbosity_true():
     assert actual == "DEBUG"
 
 
-def test_main_image(blank_png, weights_file):
-    main(weights_file, [blank_png], verbose=False, version=False)
-
-
-def test_main_directory(tmp_path, weights_file):
-    main(weights_file, [tmp_path], verbose=False, version=False)
-
-
-def test_main_zip(zip_file, weights_file):
-    main(weights_file, [zip_file], verbose=False, version=False)
-
-
-def test_create_tiles_show(mocker, monkeypatch, blank_image):
-
+def test_create_tiles_show(mocker, blank_image):
     def mock_figure(*args, **kwargs):
+        _ = args
+        _ = kwargs
         return mocker.MagicMock(spec=Figure)
 
-    monkeypatch.setattr("matplotlib.pyplot.figure", mock_figure)
-    create_tiles(blank_image, show=True)
+    mocker.patch("matplotlib.pyplot.figure", mock_figure)
+    create_tiles(blank_image)
 
 
 def test_app_help():
@@ -183,3 +176,24 @@ def test_app_version():
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert f"{__app_name__} {version}" in result.stdout
+
+
+def test_app_image(blank_png, weights_file):
+    result = runner.invoke(
+        app, ["--device=cpu", "--no-show", str(weights_file), str(blank_png)]
+    )
+    assert result.exit_code == 0
+
+
+def test_app_directory(tmp_path, weights_file):
+    result = runner.invoke(
+        app, ["--device=cpu", "--no-show", str(weights_file), str(tmp_path)]
+    )
+    assert result.exit_code == 0
+
+
+def test_app_zip(zip_file, weights_file):
+    result = runner.invoke(
+        app, ["--device=cpu", "--no-show", str(weights_file), str(zip_file)]
+    )
+    assert result.exit_code == 0
