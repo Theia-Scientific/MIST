@@ -407,6 +407,7 @@ TODO: Add steps
 Copyright (C) 2025 Theia Scientific, LLC. All rights reserved.
 
 [dask_relabeling]: https://github.com/TheJacksonLaboratory/dask_relabeling
+[deadsnakes]: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
 [direnv]: https://direnv.net/
 [jupyter]: https://jupyter.org/
 [yolo patch-based inference]: https://github.com/Koldim2001/YOLO-Patch-Based-Inference
