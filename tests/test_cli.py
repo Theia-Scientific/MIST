@@ -23,6 +23,7 @@ from mist.cli import (
     UnknownMimeTypeError,
 )
 from typer.testing import CliRunner
+from ultralytics import YOLO
 
 runner = CliRunner()
 
@@ -96,6 +97,11 @@ def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
         zf.write(blank_npy)
         zf.write(blank_tif)
     yield zip_path
+
+
+@pytest.fixture
+def yolo_model(mocker) -> YOLO:
+    return mocker.MagicMock(spec=YOLO)
 
 
 def test_read_image_file(blank_image, blank_png):
