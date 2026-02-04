@@ -87,7 +87,7 @@ def blank_tif(blank_image, tmp_path):
 
 @pytest.fixture
 def unknown_image_file(blank_png):
-    unknown_image_file = blank_png.with_suffix(".abc")
+    unknown_image_file = blank_png.with_suffix(".XXYY")
     os.rename(blank_png, unknown_image_file)
     yield unknown_image_file
 
