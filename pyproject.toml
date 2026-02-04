@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "imagecodecs",
+    "opencv-python",
     "pydantic",
     "pydantic-settings",
     "python-dotenv",
