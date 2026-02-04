@@ -408,6 +408,7 @@ def main(
         False,
         help="Use random colors for each instance; otherwise, select random color for each class.",
     ),
+    show: bool = typer.Option(True, help="Show visualization"),
     show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
     tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
     tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
@@ -510,14 +511,15 @@ def main(
             instance_class_names = [class_names[i.class_index] for i in instances]
             stats["merged"] = Counter(instance_class_names)
             print(json.dumps(stats, indent=2))
-            visualize(
-                instances,
-                original_img,
-                class_names,
-                tiles=visual_tiles,
-                random_object_colors=random_object_colors,
-                show_classes_list=visualize_classes,
-            )
+            if show:
+                visualize(
+                    instances,
+                    original_img,
+                    class_names,
+                    tiles=visual_tiles,
+                    random_object_colors=random_object_colors,
+                    show_classes_list=visualize_classes,
+                )
 
 
 if __name__ == "__main__":
