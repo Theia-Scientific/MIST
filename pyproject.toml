@@ -7,7 +7,16 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.11"
-classifiers = [ "Programming Language :: Python :: 3", "Operating System :: OS Independent" ]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Scientists",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
 dependencies = [
     "imagecodecs",
     "pydantic",
@@ -24,14 +33,25 @@ requires = [ "hatchling" ]
 build-backend = "hatchling.build"
 
 [project.optional-dependencies]
-dev = [ "build", "flake8", "hatch", "isort", "pytest", "pytest-cov", "pytest-env", "pytest-mock", "twine" ]
+dev = [
+    "build",
+    "flake8",
+    "hatch",
+    "isort",
+    "pytest",
+    "pytest-cov",
+    "pytest-env",
+    "pytest-mock",
+    "twine"
+]
 
 [project.scripts]
 mist = "mist.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/Theia-Scientific/mist"
-"Bug Tracker" = "https://github.com/Theia-Scientific/mist/issues"
+Source = "https://github.com/Theia-Scientific/mist"
+Tracker = "https://github.com/Theia-Scientific/mist/issues"
 
 [tool.coverage.report]
 exclude_lines = [ "if __name__ == .__main__.:" ]
