@@ -5,7 +5,6 @@ import importlib.metadata
 import numpy as np
 import os
 import pytest
-import torch
 import zipfile
 
 from matplotlib.figure import Figure
@@ -23,16 +22,21 @@ from mist.cli import (
     UnknownMimeTypeError,
 )
 from typer.testing import CliRunner
-from ultralytics import YOLO
+from ultralytics.utils.downloads import attempt_download_asset
 
 runner = CliRunner()
 
 
-@pytest.fixture
-def weights_file(tmp_path):
-    weights_file = tmp_path.joinpath("weights_file.pt")
-    x = torch.tensor([0, 1, 2, 3, 4])
-    torch.save(x, weights_file)
+@pytest.fixture(scope="session")
+def assets(tmp_path_factory):
+    yield tmp_path_factory.mktemp("assets")
+
+
+@pytest.fixture(scope="session")
+def weights_file(assets):
+    weights_file = attempt_download_asset(
+        "weights/yolov8n-seg.pt", dir=assets, progress=False
+    )
     yield weights_file
 
 
@@ -97,11 +101,6 @@ def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
         zf.write(blank_npy)
         zf.write(blank_tif)
     yield zip_path
-
-
-@pytest.fixture
-def yolo_model(mocker) -> YOLO:
-    return mocker.MagicMock(spec=YOLO)
 
 
 def test_read_image_file(blank_image, blank_png):
