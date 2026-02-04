@@ -167,6 +167,8 @@ def test_main_zip(zip_file, weights_file):
 def test_create_tiles_show(mocker, monkeypatch, blank_image):
 
     def mock_figure(*args, **kwargs):
+        _ = args
+        _ = kwargs
         return mocker.MagicMock(spec=Figure)
 
     monkeypatch.setattr("matplotlib.pyplot.figure", mock_figure)
