@@ -112,8 +112,10 @@ def main(
         src = source.expanduser().resolve()
         LOGGER.debug(f"src={src}")
         if src.is_dir():
+            # TODO: Add support for running inference on folder of images
             pass
         elif zipfile.is_zipfile(src):
+            # TODO: Add support for running inference on ZIP archive
             pass
         else:
             LOGGER.info("Running detection...")
