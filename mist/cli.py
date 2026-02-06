@@ -117,7 +117,7 @@ def main(
             # TODO: Add support for running inference on ZIP archive
             pass
         else:
-            LOGGER.info("Running detection...")
+            LOGGER.info("Detecting...")
             result = run(
                 src,
                 model,
@@ -135,7 +135,7 @@ def main(
                 tile_width,
                 logger=LOGGER
             )
-            LOGGER.info("Running detection...DONE")
+            LOGGER.info("Detecting...DONE")
             print(result.stats.model_dump_json())
             if show:
                 LOGGER.info("Visualizing results...")
