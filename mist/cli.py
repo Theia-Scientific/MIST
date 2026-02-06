@@ -186,15 +186,18 @@ def main(
             original_img = read_image_file(src)
             orig_height, orig_width, *_ = original_img.shape
             orig_size = (orig_width, orig_height)
+            LOGGER.info("Creating tiles...")
             tiles = create_tiles(
                 original_img,
                 tile_size=(tile_width, tile_height),
                 overlap=(overlap_width, overlap_height),
             )
+            LOGGER.info("Creating tiles...DONE")
             masks = []
             class_indices = []
             visual_tiles = []
-            for tile in tiles:
+            for index, tile in enumerate(tiles):
+                LOGGER.info(f"Running inference on {index} tile...")
                 results = model(
                     tile.img,
                     agnostic_nms=False,
@@ -208,6 +211,7 @@ def main(
                     retina_masks=True,
                     verbose=not inference_silent,
                 )
+                LOGGER.info(f"Running inference on {index} tile...DONE")
                 pred = results[0]
                 tile_class_indices = pred.boxes.cls.cpu().int().tolist()
                 class_indices.extend(tile_class_indices)
@@ -232,6 +236,7 @@ def main(
                             y_max=tile.y_start + tile_height,
                         )
                     )
+            LOGGER.info("Merging results...")
             instances = merge(
                 class_indices,
                 masks,
@@ -240,6 +245,7 @@ def main(
                 dump_masks=dump_masks,
                 merge_classes=merge_classes,
             )
+            LOGGER.info("Merging results...DONE")
             class_names = [name for _, name in sorted(model.names.items())]
             LOGGER.debug(f"class_names={class_names}")
             all_class_names = [class_names[i] for i in class_indices]
@@ -248,6 +254,7 @@ def main(
             stats["merged"] = Counter(instance_class_names)
             print(json.dumps(stats, indent=2))
             if show:
+                LOGGER.info("Visualizing results...")
                 visualize(
                     instances,
                     original_img,
@@ -256,6 +263,7 @@ def main(
                     random_object_colors=random_object_colors,
                     show_classes_list=visualize_classes,
                 )
+                LOGGER.info("Visualizing results...DONE")
 
 
 if __name__ == "__main__":
