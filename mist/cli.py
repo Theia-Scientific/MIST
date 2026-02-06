@@ -7,7 +7,7 @@ import zipfile
 
 from pathlib import Path
 from mist import __app_name__
-from mist.detect import run
+from mist.detecting import run
 from mist.visualizing import visualize
 from typing import List, Optional
 from ultralytics.models import YOLO
