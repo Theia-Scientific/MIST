@@ -1,19 +1,13 @@
 #!/usr/bin/env python3
 
 import importlib.metadata
-import json
 import logging
-import numpy as np
 import typer
 import zipfile
 
-from collections import Counter
 from pathlib import Path
 from mist import __app_name__
 from mist.detect import run
-from mist.merging import merge
-from mist.tiling import create_tiles, TileMask, TileVisual
-from mist.utils import read_image_file
 from mist.visualizing import visualize
 from typing import List, Optional
 from ultralytics.models import YOLO
