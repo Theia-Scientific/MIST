@@ -36,6 +36,26 @@ def visualize(
     list_of_class_colors=None,
     logger: logging.Logger = LOGGER
 ):
+    logger.debug(f"{instances=}")
+    logger.debug(f"{img=}")
+    logger.debug(f"{class_names=}")
+    logger.debug(f"{tiles=}")
+    logger.debug(f"{segment=}")
+    logger.debug(f"{show_boxes=}")
+    logger.debug(f"{show_class=}")
+    logger.debug(f"{fill_mask=}")
+    logger.debug(f"{alpha=}")
+    logger.debug(f"{color_class_background=}")
+    logger.debug(f"{color_class_text=}")
+    logger.debug(f"{thickness=}")
+    logger.debug(f"{font=}")
+    logger.debug(f"{font_scale=}")
+    logger.debug(f"{delta_colors=}")
+    logger.debug(f"{dpi=}")
+    logger.debug(f"{random_object_colors=}")
+    logger.debug(f"{show_confidences=}")
+    logger.debug(f"{show_classes_list=}")
+    logger.debug(f"{list_of_class_colors=}")
     labeled_image = img.copy()
     if random_object_colors:
         random.seed(int(delta_colors))
@@ -63,6 +83,10 @@ def visualize(
             color = list_of_class_colors[instance.class_index]
         box = instance.box
         x_min, y_min, x_max, y_max = box
+        logger.debug(f"{x_min=}")
+        logger.debug(f"{y_min=}")
+        logger.debug(f"{x_max=}")
+        logger.debug(f"{y_max=}")
         if segment:
             mask = instance.mask.astype(np.uint8)
             mask_resized = cv2.resize(
