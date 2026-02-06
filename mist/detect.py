@@ -4,10 +4,12 @@ import logging
 import numpy as np
 
 from collections import Counter
+from mist.instances import Instance
 from mist.merging import merge
 from mist.tiling import create_tiles, TileMask, TileVisual
 from mist.utils import read_image_file
 from pathlib import Path
+from pydantic import BaseModel, ConfigDict
 from ultralytics.models import YOLO
 from typing import List
 
@@ -27,7 +29,20 @@ DEFAULT_TILE_WIDTH: int = 640
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-def detect(
+class Stats(BaseModel):
+    merged: Counter
+    unmerged: Counter
+
+class Result(BaseModel):
+    class_names: List[str]
+    instances: List[Instance]
+    original_image: np.ndarray
+    stats: Stats
+    visual_tiles: List[TileVisual]
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+def run(
     src: Path,
     model: YOLO,
     device: str = DEFAULT_DEVICE,
@@ -40,11 +55,10 @@ def detect(
     merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
-    show_tiles: bool = DEFAULT_SHOW_TILES,
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
     logger: logging.Logger = LOGGER
-):
+) -> Result:
     logger.info("Reading image file...")
     original_img = read_image_file(src)
     logger.info("Reading image file...DONE")
@@ -91,15 +105,14 @@ def detect(
                     data=data, offset_x=tile.x_start, offset_y=tile.y_start
                 )
             )
-        if show_tiles:
-            visual_tiles.append(
-                TileVisual(
-                    x_min=tile.x_start,
-                    y_min=tile.y_start,
-                    x_max=tile.x_start + tile_width,
-                    y_max=tile.y_start + tile_height,
-                )
+        visual_tiles.append(
+            TileVisual(
+                x_min=tile.x_start,
+                y_min=tile.y_start,
+                x_max=tile.x_start + tile_width,
+                y_max=tile.y_start + tile_height,
             )
+        )
     logger.info("Merging results...")
     instances = merge(
         class_indices,
@@ -113,6 +126,14 @@ def detect(
     class_names = [name for _, name in sorted(model.names.items())]
     logger.debug(f"class_names={class_names}")
     all_class_names = [class_names[i] for i in class_indices]
-    stats = {"unmerged": Counter(all_class_names)}
     instance_class_names = [class_names[i.class_index] for i in instances]
-    stats["merged"] = Counter(instance_class_names)
+    return Result(
+        class_names=class_names,
+        instances=instances,
+        original_image=original_img,
+        stats=Stats(
+            merged = Counter(instance_class_names),
+            unmerged = Counter(all_class_names)
+        ),
+        visual_tiles=visual_tiles
+    )
