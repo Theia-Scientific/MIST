@@ -16,8 +16,8 @@ import zipfile
 
 from collections import Counter
 from pathlib import Path
-from pydantic import BaseModel, ConfigDict
 from mist import __app_name__
+from mist.merging import merge
 from mist.tiling import create_tiles, TileMask, TileVisual
 from typing import List, Optional, Tuple
 from ultralytics.models import YOLO
@@ -42,16 +42,6 @@ class UnknownMimeTypeError(Exception):
 
 class ImageDecodeError(Exception):
     pass
-
-
-class Instance(BaseModel):
-    box: List[int]
-    class_index: int
-    id: int
-    mask: np.ndarray
-    scores: List[float]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 def map_verbosity(enabled: bool) -> str:
@@ -366,7 +356,7 @@ def main(
                             y_max=tile.y_start + tile_height,
                         )
                     )
-            instances = combine(
+            instances = merge(
                 class_indices,
                 masks,
                 orig_size,

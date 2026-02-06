@@ -6,12 +6,13 @@ import numpy as np
 import os
 import torch
 
+from mist.instances import Instance
 from mist.tiling import TileMask
 from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-def combine(
+def merge(
     class_indices: List[int],
     masks: List[TileMask],
     src_image_size: Tuple[int, int],
