@@ -35,20 +35,6 @@ def random_float32_image() -> np.ndarray:
 
 
 @pytest.fixture
-def blank_npy(blank_image, tmp_path):
-    npy_file = tmp_path.joinpath("image.npy")
-    np.save(npy_file, blank_image)
-    yield npy_file
-
-
-@pytest.fixture
-def blank_tif(blank_image, tmp_path):
-    tif_file = tmp_path.joinpath("image.tif")
-    cv2.imwrite(str(tif_file), blank_image)
-    yield tif_file
-
-
-@pytest.fixture
 def unknown_image_file(blank_png):
     unknown_image_file = blank_png.with_suffix(".XXYY")
     os.rename(blank_png, unknown_image_file)
