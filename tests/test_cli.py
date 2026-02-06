@@ -7,11 +7,9 @@ import os
 import pytest
 import zipfile
 
-from matplotlib.figure import Figure
 from mist import __app_name__
 from mist.cli import (
     app,
-    create_tiles,
     map_verbosity,
 )
 from typer.testing import CliRunner
@@ -104,16 +102,6 @@ def test_map_verbosity_false():
 def test_map_verbosity_true():
     actual = map_verbosity(True)
     assert actual == "DEBUG"
-
-
-def test_create_tiles_show(mocker, blank_image):
-    def mock_figure(*args, **kwargs):
-        _ = args
-        _ = kwargs
-        return mocker.MagicMock(spec=Figure)
-
-    mocker.patch("matplotlib.pyplot.figure", mock_figure)
-    create_tiles(blank_image)
 
 
 def test_app_help():
