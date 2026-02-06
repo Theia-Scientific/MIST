@@ -17,23 +17,6 @@ class Tile(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-class TileMask(BaseModel):
-    data: np.ndarray
-    offset_x: int
-    offset_y: int
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-
-class TileVisual(BaseModel):
-    color: Tuple[int, int, int] = (0, 0, 255)  # BGR
-    thickness: int = 3
-    x_min: int
-    y_min: int
-    x_max: int
-    y_max: int
-
-
 def create_tiles(
     src_img: np.ndarray,
     tile_size: Tuple[int, int] = (640, 640),

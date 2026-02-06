@@ -5,9 +5,10 @@ import numpy as np
 
 from collections import Counter
 from mist.instances import Instance
-from mist.merging import merge
-from mist.tiling import create_tiles, TileMask, TileVisual
+from mist.merging import Mask, merge 
+from mist.tiling import create_tiles
 from mist.utils import read_image_file
+from mist.visualizing import Tile as VisualTile
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from ultralytics.models import YOLO
@@ -33,14 +34,16 @@ class Stats(BaseModel):
     merged: Counter
     unmerged: Counter
 
+
 class Result(BaseModel):
     class_names: List[str]
     instances: List[Instance]
     original_image: np.ndarray
     stats: Stats
-    visual_tiles: List[TileVisual]
+    visual_tiles: List[VisualTile]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
+
 
 def run(
     src: Path,
@@ -101,12 +104,12 @@ def run(
             masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
         for data in masks_data:
             masks.append(
-                TileMask(
+                Mask(
                     data=data, offset_x=tile.x_start, offset_y=tile.y_start
                 )
             )
         visual_tiles.append(
-            TileVisual(
+            VisualTile(
                 x_min=tile.x_start,
                 y_min=tile.y_start,
                 x_max=tile.x_start + tile_width,

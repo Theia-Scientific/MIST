@@ -8,16 +8,25 @@ import random
 import statistics
 
 from mist.instances import Instance
-from mist.tiling import TileVisual
+from pydantic import BaseModel
 from typing import List, Optional, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
+
+class Tile(BaseModel):
+    color: Tuple[int, int, int] = (0, 0, 255)  # BGR
+    thickness: int = 3
+    x_min: int
+    y_min: int
+    x_max: int
+    y_max: int
+
 
 def visualize(
     instances: List[Instance],
     img: np.ndarray,
     class_names: List[str],
-    tiles: Optional[List[TileVisual]] = None,
+    tiles: Optional[List[Tile]] = None,
     segment: bool = True,
     show_boxes: bool = False,
     show_class: bool = False,

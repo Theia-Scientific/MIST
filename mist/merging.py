@@ -7,14 +7,22 @@ import os
 import torch
 
 from mist.instances import Instance
-from mist.tiling import TileMask
+from pydantic import BaseModel, ConfigDict
 from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+class Mask(BaseModel):
+    data: np.ndarray
+    offset_x: int
+    offset_y: int
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+
 def merge(
     class_indices: List[int],
-    masks: List[TileMask],
+    masks: List[Mask],
     src_image_size: Tuple[int, int],
     tile_size: Tuple[int, int],
     dump_masks: bool = False,
