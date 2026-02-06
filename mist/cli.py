@@ -15,7 +15,6 @@ from ultralytics.models import YOLO
 logging.getLogger("matplotlib.font_manager").disabled = True
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
-
 PREFIX: str = f"{__app_name__.upper()}"
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
