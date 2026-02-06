@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
+import cv2
 import numpy as np
+import os
 import pytest
 
 from mist.utils import (
@@ -11,6 +13,47 @@ from mist.utils import (
     TIFF_MIME_TYPE,
     UnknownMimeTypeError
 )
+
+@pytest.fixture
+def blank_float32_image() -> np.ndarray:
+    return np.zeros((4096, 4096, 3), dtype=np.float32)
+
+
+@pytest.fixture
+def blank_grayscale_image() -> np.ndarray:
+    return np.zeros((4096, 4096), dtype=np.uint8)
+
+
+@pytest.fixture
+def random_image() -> np.ndarray:
+    return np.random.randint(255, size=(4096, 4096, 3), dtype=np.uint8)
+
+
+@pytest.fixture
+def random_float32_image() -> np.ndarray:
+    return np.random.random((4096, 4096, 3)).astype(np.float32)
+
+
+@pytest.fixture
+def blank_npy(blank_image, tmp_path):
+    npy_file = tmp_path.joinpath("image.npy")
+    np.save(npy_file, blank_image)
+    yield npy_file
+
+
+@pytest.fixture
+def blank_tif(blank_image, tmp_path):
+    tif_file = tmp_path.joinpath("image.tif")
+    cv2.imwrite(str(tif_file), blank_image)
+    yield tif_file
+
+
+@pytest.fixture
+def unknown_image_file(blank_png):
+    unknown_image_file = blank_png.with_suffix(".XXYY")
+    os.rename(blank_png, unknown_image_file)
+    yield unknown_image_file
+
 
 def test_read_image_file(blank_image, blank_png):
     actual = read_image_file(blank_png)
