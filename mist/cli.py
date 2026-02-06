@@ -10,6 +10,7 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 from mist import __app_name__
+from mist.detect import run
 from mist.merging import merge
 from mist.tiling import create_tiles, TileMask, TileVisual
 from mist.utils import read_image_file
@@ -111,7 +112,6 @@ def main(
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"version={version}")
     LOGGER.debug(f"weights_file={weights_file}")
-    LOGGER.debug(f"inference_iou={inference_iou}")
     model = YOLO(weights_file)
     for source in sources:
         LOGGER.debug(f"source={sources}")
@@ -122,84 +122,37 @@ def main(
         elif zipfile.is_zipfile(src):
             pass
         else:
-            LOGGER.info("Reading image file...")
-            original_img = read_image_file(src)
-            LOGGER.info("Reading image file...DONE")
-            orig_height, orig_width, *_ = original_img.shape
-            orig_size = (orig_width, orig_height)
-            LOGGER.info("Creating tiles...")
-            tiles = create_tiles(
-                original_img,
-                tile_size=(tile_width, tile_height),
-                overlap=(overlap_width, overlap_height),
+            LOGGER.info("Running detection...")
+            result = run(
+                src,
+                model,
+                device,
+                dump_masks,
+                inference_confidence,
+                inference_image_size,
+                inference_iou,
+                inference_max_detections,
+                inference_silent,
+                merge_classes,
+                overlap_height,
+                overlap_width,
+                tile_height,
+                tile_width,
+                logger=LOGGER
             )
-            LOGGER.info("Creating tiles...DONE")
-            masks = []
-            class_indices = []
-            visual_tiles = []
-            for index, tile in enumerate(tiles):
-                LOGGER.info(f"Running inference on {index} tile...")
-                results = model(
-                    tile.img,
-                    agnostic_nms=False,
-                    device=device,
-                    classes=None,
-                    conf=inference_confidence,
-                    half=False,
-                    imgsz=inference_image_size,
-                    iou=inference_iou,
-                    max_det=inference_max_detections,
-                    retina_masks=True,
-                    verbose=not inference_silent,
-                )
-                LOGGER.info(f"Running inference on {index} tile...DONE")
-                pred = results[0]
-                tile_class_indices = pred.boxes.cls.cpu().int().tolist()
-                class_indices.extend(tile_class_indices)
-                if pred.masks is None:
-                    masks_data = np.zeros(
-                        (len(tile_class_indices), tile_height, tile_width)
-                    )
-                else:
-                    masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
-                for data in masks_data:
-                    masks.append(
-                        TileMask(
-                            data=data, offset_x=tile.x_start, offset_y=tile.y_start
-                        )
-                    )
-                if show_tiles:
-                    visual_tiles.append(
-                        TileVisual(
-                            x_min=tile.x_start,
-                            y_min=tile.y_start,
-                            x_max=tile.x_start + tile_width,
-                            y_max=tile.y_start + tile_height,
-                        )
-                    )
-            LOGGER.info("Merging results...")
-            instances = merge(
-                class_indices,
-                masks,
-                orig_size,
-                (tile_width, tile_height),
-                dump_masks=dump_masks,
-                merge_classes=merge_classes,
-            )
-            LOGGER.info("Merging results...DONE")
-            class_names = [name for _, name in sorted(model.names.items())]
-            LOGGER.debug(f"class_names={class_names}")
-            all_class_names = [class_names[i] for i in class_indices]
-            stats = {"unmerged": Counter(all_class_names)}
-            instance_class_names = [class_names[i.class_index] for i in instances]
-            stats["merged"] = Counter(instance_class_names)
-            print(json.dumps(stats, indent=2))
+            LOGGER.info("Running detection...DONE")
+            print(result.stats.model_dump_json())
             if show:
                 LOGGER.info("Visualizing results...")
+                visual_tiles = []
+                if show_tiles:
+                    visual_tiles = result.visual_tiles
+                else:
+                    visual_tiles = []
                 visualize(
-                    instances,
-                    original_img,
-                    class_names,
+                    result.instances,
+                    result.original_image,
+                    result.class_names,
                     tiles=visual_tiles,
                     random_object_colors=random_object_colors,
                     show_classes_list=visualize_classes,
