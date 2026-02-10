@@ -44,7 +44,7 @@ def run(
     show_classes_list=[],
     list_of_class_colors=None,
     logger: logging.Logger = LOGGER
-):
+) -> np.ndarray:
     logger.debug(f"{instances=}")
     logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
@@ -165,3 +165,4 @@ def run(
     plt.imshow(labeled_image)
     plt.axis("off")
     plt.show()
+    return labeled_image
