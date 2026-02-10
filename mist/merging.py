@@ -84,7 +84,6 @@ def run(
                     class_index=cls_index,
                     id=instance_id,
                     mask=instance_mask,
-                    scores=[],
                 )
                 instances.append(instance)
                 instance_id += 1

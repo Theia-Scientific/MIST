@@ -5,7 +5,6 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-import statistics
 
 from mist.instances import Instance
 from pydantic import BaseModel
@@ -40,7 +39,6 @@ def run(
     delta_colors: int = 3,
     dpi: int = 150,
     random_object_colors=True,
-    show_confidences=False,
     show_classes_list=[],
     list_of_class_colors=None,
     logger: logging.Logger = LOGGER
@@ -62,7 +60,6 @@ def run(
     logger.debug(f"{delta_colors=}")
     logger.debug(f"{dpi=}")
     logger.debug(f"{random_object_colors=}")
-    logger.debug(f"{show_confidences=}")
     logger.debug(f"{show_classes_list=}")
     logger.debug(f"{list_of_class_colors=}")
     labeled_image = img.copy()
@@ -132,10 +129,7 @@ def run(
                 labeled_image, (x_min, y_min), (x_max, y_max), color, thickness
             )
         if show_class:
-            if show_confidences:
-                label = f"{str(class_name)} {statistics.fmean(instance.scores):.2}"
-            else:
-                label = str(class_name)
+            label = str(class_name)
             (text_width, text_height), _ = cv2.getTextSize(
                 label, font, font_scale, thickness
             )

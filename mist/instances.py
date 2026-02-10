@@ -10,6 +10,5 @@ class Instance(BaseModel):
     class_index: int
     id: int
     mask: np.ndarray
-    scores: List[float]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
