@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import cv2
 import numpy as np
 import os
 import pytest
 
 from mist.utils import (
+    ImageDecodeError,
     correct_cv_image,
     decode_data,
     NPY_MIME_TYPE,
@@ -83,5 +83,12 @@ def test_decode_data_tif(blank_image, blank_tif):
         data = f.read()
     actual = decode_data(data, TIFF_MIME_TYPE)
     assert (actual == blank_image).all()
+
+
+def test_decode_data_fails(blank_npy):
+    with open(blank_npy, "rb+") as f:
+        data = f.read()
+    with pytest.raises(ImageDecodeError):
+        decode_data(data, "image/jpeg")
 
 
