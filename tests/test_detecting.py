@@ -3,5 +3,9 @@
 from mist.detecting import run
 from ultralytics.models import YOLO
 
-def test_run_with_segmentation_results(blank_png, weights_file):
+def test_run(bus_jpg, weights_file):
+    run(bus_jpg, YOLO(weights_file))
+
+
+def test_run_with_no_predictions(blank_png, weights_file):
     run(blank_png, YOLO(weights_file))
