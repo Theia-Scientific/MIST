@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
-from ultralytics.utils.downloads import attempt_download_asset
+from ultralytics.utils.downloads import attempt_download_asset, download
 
 @pytest.fixture(scope="session")
 def assets(tmp_path_factory):
@@ -21,7 +21,9 @@ def weights_file(assets):
 
 @pytest.fixture(scope="session")
 def bus_jpg(assets):
-    pass
+    bus_jpg = "bus.jpg"
+    download(f"https://www.ultralytics.com/images/{bus_jpg}", dir=assets)
+    return assets.joinpath(bus_jpg)
 
 
 @pytest.fixture
@@ -48,8 +50,3 @@ def blank_tif(blank_image, tmp_path):
     tif_file = tmp_path.joinpath("image.tif")
     cv2.imwrite(str(tif_file), blank_image)
     yield tif_file
-
-
-
-
-
