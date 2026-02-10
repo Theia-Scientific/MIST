@@ -15,6 +15,7 @@ from typing import List
 
 DEFAULT_DEVICE: str = "cuda:0"
 DEFAULT_DUMP_MASKS: bool = False
+DEFAULT_DUMP_MASKS_TO: Path = Path("tmp")
 DEFAULT_INFERENCE_CONFIDENCE: float = 0.35
 DEFAULT_INFERENCE_IMAGE_SIZE: int = 640
 DEFAULT_INFERENCE_IOU: float = 0.7
@@ -49,6 +50,7 @@ def run(
     model: YOLO,
     device: str = DEFAULT_DEVICE,
     dump_masks: bool = DEFAULT_DUMP_MASKS,
+    dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
     inference_confidence: float = DEFAULT_INFERENCE_CONFIDENCE,
     inference_image_size: int = DEFAULT_INFERENCE_IMAGE_SIZE,
     inference_iou: float = DEFAULT_INFERENCE_IOU,
@@ -122,6 +124,7 @@ def run(
         orig_size,
         (tile_width, tile_height),
         dump_masks=dump_masks,
+        dump_masks_to=dump_masks_to,
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")
