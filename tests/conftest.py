@@ -19,6 +19,11 @@ def weights_file(assets):
     return assets.joinpath(weights_file)
 
 
+@pytest.fixture(scope="session")
+def bus_jpg(assets):
+    pass
+
+
 @pytest.fixture
 def blank_image() -> np.ndarray:
     return np.zeros((4096, 4096, 3), dtype=np.uint8)
@@ -43,5 +48,8 @@ def blank_tif(blank_image, tmp_path):
     tif_file = tmp_path.joinpath("image.tif")
     cv2.imwrite(str(tif_file), blank_image)
     yield tif_file
+
+
+
 
 
