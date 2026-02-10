@@ -4,9 +4,8 @@ import logging
 import numpy as np
 
 from collections import Counter
-from mist import tiling
+from mist import merging, tiling
 from mist.instances import Instance
-from mist.merging import Mask, merge 
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
 from pathlib import Path
@@ -104,7 +103,7 @@ def run(
             masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
         for data in masks_data:
             masks.append(
-                Mask(
+                merging.Mask(
                     data=data, offset_x=tile.x_start, offset_y=tile.y_start
                 )
             )
@@ -117,7 +116,7 @@ def run(
             )
         )
     logger.info("Merging results...")
-    instances = merge(
+    instances = merging.run(
         class_indices,
         masks,
         orig_size,

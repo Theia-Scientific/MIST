@@ -20,7 +20,7 @@ class Mask(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def merge(
+def run(
     class_indices: List[int],
     masks: List[Mask],
     src_image_size: Tuple[int, int],
