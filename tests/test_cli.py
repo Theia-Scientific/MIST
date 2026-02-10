@@ -23,6 +23,17 @@ def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
     yield zip_path
 
 
+@pytest.fixture
+def mock_visualizing_run(mocker):
+    def mock_visualizing_run(*args, **kwargs):
+        _ = args
+        _ = kwargs
+
+        return None
+
+    mocker.patch("mist.visualizing.run", mock_visualizing_run)
+
+
 def test_map_verbosity_false():
     actual = map_verbosity(False)
     assert actual == "INFO"
@@ -66,28 +77,16 @@ def test_app_zip(zip_file, weights_file):
     assert result.exit_code == 0
 
 
-def test_app_visualize(mocker, blank_png, weights_file):
-    def mock_visualizing_run(*args, **kwargs):
-        _ = args
-        _ = kwargs
-
-        return None
-
-    mocker.patch("mist.visualizing.run", mock_visualizing_run)
+def test_app_visualize(mock_visualizing_run, blank_png, weights_file):
+    _ = mock_visualizing_run
     result = runner.invoke(
         app, ["--device=cpu", str(weights_file), str(blank_png)]
     )
     assert result.exit_code == 0
 
    
-def test_app_visualize_show_tiles(mocker, blank_png, weights_file):
-    def mock_visualizing_run(*args, **kwargs):
-        _ = args
-        _ = kwargs
-
-        return None
-
-    mocker.patch("mist.visualizing.run", mock_visualizing_run)
+def test_app_visualize_show_tiles(mock_visualizing_run, blank_png, weights_file):
+    _ = mock_visualizing_run
     result = runner.invoke(
         app, ["--device=cpu", "--show-tiles", str(weights_file), str(blank_png)]
     )
