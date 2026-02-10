@@ -92,3 +92,15 @@ def test_run_with_tiles(mock_plt_show, bus_jpg, weights_file):
     assert labeled_image.any()
 
 
+def test_run_with_boxes(mock_plt_show, bus_jpg, weights_file):
+    _ = mock_plt_show
+    result = detecting.run(bus_jpg, YOLO(weights_file), "cpu")
+    labeled_image = visualizing.run(
+        result.instances,
+        result.original_image,
+        result.class_names,
+        show_boxes=True
+    )
+    assert labeled_image.any()
+
+
