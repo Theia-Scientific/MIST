@@ -4,9 +4,8 @@ import logging
 import numpy as np
 
 from collections import Counter
+from mist import merging, tiling
 from mist.instances import Instance
-from mist.merging import Mask, merge 
-from mist.tiling import create_tiles
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
 from pathlib import Path
@@ -16,6 +15,7 @@ from typing import List
 
 DEFAULT_DEVICE: str = "cuda:0"
 DEFAULT_DUMP_MASKS: bool = False
+DEFAULT_DUMP_MASKS_TO: Path = Path("tmp")
 DEFAULT_INFERENCE_CONFIDENCE: float = 0.35
 DEFAULT_INFERENCE_IMAGE_SIZE: int = 640
 DEFAULT_INFERENCE_IOU: float = 0.7
@@ -50,6 +50,7 @@ def run(
     model: YOLO,
     device: str = DEFAULT_DEVICE,
     dump_masks: bool = DEFAULT_DUMP_MASKS,
+    dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
     inference_confidence: float = DEFAULT_INFERENCE_CONFIDENCE,
     inference_image_size: int = DEFAULT_INFERENCE_IMAGE_SIZE,
     inference_iou: float = DEFAULT_INFERENCE_IOU,
@@ -68,7 +69,7 @@ def run(
     orig_height, orig_width, *_ = original_img.shape
     orig_size = (orig_width, orig_height)
     logger.info("Creating tiles...")
-    tiles = create_tiles(
+    tiles = tiling.run(
         original_img,
         tile_size=(tile_width, tile_height),
         overlap=(overlap_width, overlap_height),
@@ -104,7 +105,7 @@ def run(
             masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
         for data in masks_data:
             masks.append(
-                Mask(
+                merging.Mask(
                     data=data, offset_x=tile.x_start, offset_y=tile.y_start
                 )
             )
@@ -117,12 +118,13 @@ def run(
             )
         )
     logger.info("Merging results...")
-    instances = merge(
+    instances = merging.run(
         class_indices,
         masks,
         orig_size,
         (tile_width, tile_height),
         dump_masks=dump_masks,
+        dump_masks_to=dump_masks_to,
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")

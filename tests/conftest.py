@@ -4,6 +4,28 @@ import cv2
 import numpy as np
 import pytest
 
+from ultralytics.utils.downloads import attempt_download_asset, download
+
+@pytest.fixture(scope="session")
+def assets(tmp_path_factory):
+    return tmp_path_factory.mktemp("assets")
+
+
+@pytest.fixture(scope="session")
+def weights_file(assets):
+    weights_file = attempt_download_asset(
+        "weights/yolov8n-seg.pt", dir=assets, progress=False
+    )
+    return assets.joinpath(weights_file)
+
+
+@pytest.fixture(scope="session")
+def bus_jpg(assets):
+    bus_jpg = "bus.jpg"
+    download(f"https://www.ultralytics.com/images/{bus_jpg}", dir=assets)
+    return assets.joinpath(bus_jpg)
+
+
 @pytest.fixture
 def blank_image() -> np.ndarray:
     return np.zeros((4096, 4096, 3), dtype=np.uint8)
@@ -28,5 +50,3 @@ def blank_tif(blank_image, tmp_path):
     tif_file = tmp_path.joinpath("image.tif")
     cv2.imwrite(str(tif_file), blank_image)
     yield tif_file
-
-

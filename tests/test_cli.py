@@ -10,23 +10,8 @@ from mist.cli import (
     map_verbosity,
 )
 from typer.testing import CliRunner
-from ultralytics.utils.downloads import attempt_download_asset
 
 runner = CliRunner()
-
-
-@pytest.fixture(scope="session")
-def assets(tmp_path_factory):
-    return tmp_path_factory.mktemp("assets")
-
-
-@pytest.fixture(scope="session")
-def weights_file(assets):
-    weights_file = attempt_download_asset(
-        "weights/yolov8n-seg.pt", dir=assets, progress=False
-    )
-    return assets.joinpath(weights_file)
-
 
 @pytest.fixture
 def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
@@ -36,6 +21,17 @@ def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
         zf.write(blank_npy)
         zf.write(blank_tif)
     yield zip_path
+
+
+@pytest.fixture
+def mock_visualizing_run(mocker):
+    def mock_visualizing_run(*args, **kwargs):
+        _ = args
+        _ = kwargs
+
+        return None
+
+    mocker.patch("mist.visualizing.run", mock_visualizing_run)
 
 
 def test_map_verbosity_false():
@@ -79,3 +75,20 @@ def test_app_zip(zip_file, weights_file):
         app, ["--device=cpu", "--no-show", str(weights_file), str(zip_file)]
     )
     assert result.exit_code == 0
+
+
+def test_app_visualize(mock_visualizing_run, blank_png, weights_file):
+    _ = mock_visualizing_run
+    result = runner.invoke(
+        app, ["--device=cpu", str(weights_file), str(blank_png)]
+    )
+    assert result.exit_code == 0
+
+   
+def test_app_visualize_show_tiles(mock_visualizing_run, blank_png, weights_file):
+    _ = mock_visualizing_run
+    result = runner.invoke(
+        app, ["--device=cpu", "--show-tiles", str(weights_file), str(blank_png)]
+    )
+    assert result.exit_code == 0
+   

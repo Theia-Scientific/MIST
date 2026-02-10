@@ -6,9 +6,7 @@ import typer
 import zipfile
 
 from pathlib import Path
-from mist import __app_name__
-from mist.detecting import run
-from mist.visualizing import visualize
+from mist import __app_name__, detecting, visualizing
 from typing import List, Optional
 from ultralytics.models import YOLO
 
@@ -43,6 +41,9 @@ def main(
     device: str = typer.Option("cuda:0", help="The device to use for inference."),
     dump_masks: bool = typer.Option(
         False, help="Creates PNGs of masks during merging."
+    ),
+    dump_masks_to: Path = typer.Option(
+        Path("tmp"), help="Location to create PNGs of masks during merging."
     ),
     inference_confidence: float = typer.Option(
         0.35, help="The confidence threshold as a ratio between 0.0. and 1.0."
@@ -118,21 +119,22 @@ def main(
             pass
         else:
             LOGGER.info("Detecting...")
-            result = run(
+            result = detecting.run(
                 src,
                 model,
                 device,
-                dump_masks,
-                inference_confidence,
-                inference_image_size,
-                inference_iou,
-                inference_max_detections,
-                inference_silent,
-                merge_classes,
-                overlap_height,
-                overlap_width,
-                tile_height,
-                tile_width,
+                dump_masks=dump_masks,
+                dump_masks_to=dump_masks_to,
+                inference_confidence=inference_confidence,
+                inference_image_size=inference_image_size,
+                inference_iou=inference_iou,
+                inference_max_detections=inference_max_detections,
+                inference_silent=inference_silent,
+                merge_classes=merge_classes,
+                overlap_height=overlap_height,
+                overlap_width=overlap_width,
+                tile_height=tile_height,
+                tile_width=tile_width,
                 logger=LOGGER
             )
             LOGGER.info("Detecting...DONE")
@@ -144,7 +146,7 @@ def main(
                     visual_tiles = result.visual_tiles
                 else:
                     visual_tiles = []
-                visualize(
+                visualizing.run(
                     result.instances,
                     result.original_image,
                     result.class_names,
