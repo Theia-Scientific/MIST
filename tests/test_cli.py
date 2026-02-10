@@ -10,23 +10,8 @@ from mist.cli import (
     map_verbosity,
 )
 from typer.testing import CliRunner
-from ultralytics.utils.downloads import attempt_download_asset
 
 runner = CliRunner()
-
-
-@pytest.fixture(scope="session")
-def assets(tmp_path_factory):
-    return tmp_path_factory.mktemp("assets")
-
-
-@pytest.fixture(scope="session")
-def weights_file(assets):
-    weights_file = attempt_download_asset(
-        "weights/yolov8n-seg.pt", dir=assets, progress=False
-    )
-    return assets.joinpath(weights_file)
-
 
 @pytest.fixture
 def zip_file(blank_png, blank_npy, blank_tif, tmp_path):

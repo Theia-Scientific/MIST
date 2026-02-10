@@ -4,6 +4,21 @@ import cv2
 import numpy as np
 import pytest
 
+from ultralytics.utils.downloads import attempt_download_asset
+
+@pytest.fixture(scope="session")
+def assets(tmp_path_factory):
+    return tmp_path_factory.mktemp("assets")
+
+
+@pytest.fixture(scope="session")
+def weights_file(assets):
+    weights_file = attempt_download_asset(
+        "weights/yolov8n-seg.pt", dir=assets, progress=False
+    )
+    return assets.joinpath(weights_file)
+
+
 @pytest.fixture
 def blank_image() -> np.ndarray:
     return np.zeros((4096, 4096, 3), dtype=np.uint8)
