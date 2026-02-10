@@ -64,3 +64,32 @@ def test_app_zip(zip_file, weights_file):
         app, ["--device=cpu", "--no-show", str(weights_file), str(zip_file)]
     )
     assert result.exit_code == 0
+
+
+def test_app_visualize(mocker, blank_png, weights_file):
+    def mock_visualizing_run(*args, **kwargs):
+        _ = args
+        _ = kwargs
+
+        return None
+
+    mocker.patch("mist.visualizing.run", mock_visualizing_run)
+    result = runner.invoke(
+        app, ["--device=cpu", str(weights_file), str(blank_png)]
+    )
+    assert result.exit_code == 0
+
+   
+def test_app_visualize_show_tiles(mocker, blank_png, weights_file):
+    def mock_visualizing_run(*args, **kwargs):
+        _ = args
+        _ = kwargs
+
+        return None
+
+    mocker.patch("mist.visualizing.run", mock_visualizing_run)
+    result = runner.invoke(
+        app, ["--device=cpu", "--show-tiles", str(weights_file), str(blank_png)]
+    )
+    assert result.exit_code == 0
+   

@@ -6,9 +6,8 @@ import typer
 import zipfile
 
 from pathlib import Path
-from mist import __app_name__
+from mist import __app_name__, visualizing
 from mist.detecting import run
-from mist.visualizing import visualize
 from typing import List, Optional
 from ultralytics.models import YOLO
 
@@ -144,7 +143,7 @@ def main(
                     visual_tiles = result.visual_tiles
                 else:
                     visual_tiles = []
-                visualize(
+                visualizing.run(
                     result.instances,
                     result.original_image,
                     result.class_names,

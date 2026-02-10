@@ -22,7 +22,7 @@ class Tile(BaseModel):
     y_max: int
 
 
-def visualize(
+def run(
     instances: List[Instance],
     img: np.ndarray,
     class_names: List[str],
