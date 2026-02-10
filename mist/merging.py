@@ -44,12 +44,14 @@ def run(
     instance_id = 0
     instances = []
     for cls_index in torch.unique(tensor_class_indices):
-        logger.debug(f"cls_index={cls_index}")
+        logger.debug(f"{cls_index=}")
+        cls_index_int = cls_index.item()
+        logger.debug(f"{cls_index_int=}")
         if (cls_index in merge_classes and len(merge_classes) > 0) or len(
             merge_classes
         ) == 0:
             if dump_masks:
-                os.makedirs(dump_masks_to.joinpath(cls_index), exist_ok=True)
+                os.makedirs(dump_masks_to.joinpath(str(cls_index_int)), exist_ok=True)
             cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
             class_masks = [masks[i] for i in cls_indexes]
             logger.debug(f"class masks count = {len(class_masks)}")
@@ -61,7 +63,8 @@ def run(
                     mask.offset_x : mask.offset_x + tile_width,
                 ] += mask.data
                 if dump_masks:
-                    dst = dump_masks_to.joinpath(cls_index)
+                    dst = dump_masks_to.joinpath(str(cls_index_int))
+                    logger.debug(f"{dst=}")
                     cv2.imwrite(
                         str(dst.joinpath(f"{i}c.png")), class_mask.astype(np.uint8) * 255
                     )
@@ -81,7 +84,7 @@ def run(
                 cv2.fillPoly(instance_mask, [contour], 1)
                 if dump_masks:
                     cv2.imwrite(
-                        str(dump_masks_to.joinpath(cls_index, f"{instance_id}i.png")), instance_mask * 255
+                        str(dump_masks_to.joinpath(str(cls_index_int), f"{instance_id}i.png")), instance_mask * 255
                     )
                 instance = Instance(
                     box=[x, y, x + w, y + h],
