@@ -17,7 +17,7 @@ class Tile(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
-def create_tiles(
+def run(
     src_img: np.ndarray,
     tile_size: Tuple[int, int] = (640, 640),
     overlap: Tuple[float, float] = (0.2, 0.2),

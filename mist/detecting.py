@@ -4,9 +4,9 @@ import logging
 import numpy as np
 
 from collections import Counter
+from mist import tiling
 from mist.instances import Instance
 from mist.merging import Mask, merge 
-from mist.tiling import create_tiles
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
 from pathlib import Path
@@ -68,7 +68,7 @@ def run(
     orig_height, orig_width, *_ = original_img.shape
     orig_size = (orig_width, orig_height)
     logger.info("Creating tiles...")
-    tiles = create_tiles(
+    tiles = tiling.run(
         original_img,
         tile_size=(tile_width, tile_height),
         overlap=(overlap_width, overlap_height),
