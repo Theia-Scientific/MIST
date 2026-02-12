@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.metadata
+import json
 import logging
 import os
 import tempfile
@@ -10,6 +11,7 @@ import zipfile
 from mist import __app_name__, detecting, utils, visualizing
 from natsort import natsorted
 from pathlib import Path
+from pydantic import BaseModel
 from typing import List, Optional
 from ultralytics.models import YOLO
 
@@ -21,6 +23,11 @@ PREFIX: str = f"{__app_name__.upper()}"
 app = typer.Typer(pretty_exceptions_show_locals=False)
 
 
+class Result(BaseModel):
+    source: Path
+    stats: detecting.Stats
+
+    
 def map_verbosity(enabled: bool) -> str:
     if enabled:
         return "DEBUG"
@@ -136,6 +143,7 @@ def main(
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"{version=}")
     model = YOLO(weights_file)
+    results = []
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
         result = detecting.run(
@@ -157,7 +165,6 @@ def main(
             logger=LOGGER
         )
         LOGGER.info("Detecting...DONE")
-        print(result.stats.model_dump_json())
         if show:
             LOGGER.info("Visualizing results...")
             visual_tiles = []
@@ -174,6 +181,8 @@ def main(
                 show_classes_list=visualize_classes,
             )
             LOGGER.info("Visualizing results...DONE")
+        results.append(Result(source=src, stats=result.stats).model_dump())
+    json.dumps(results)
 
 
 if __name__ == "__main__":
