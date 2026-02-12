@@ -20,9 +20,9 @@ class ImageDecodeError(Exception):
     pass
 
 
-class UnknownMimeTypeError(Exception):
-    def __init__(self, file_name: str):
-        self.file_name = file_name
+class UnsupportedImageFile(Exception):
+    def __init__(self, path: Path):
+        self.path = path
 
 
 def count_channels(img: np.ndarray) -> int:
@@ -71,9 +71,11 @@ def is_supported_image_file(file_name: str) -> Optional[str]:
    
 
 def read_image_file(source: Path) -> np.ndarray:
-    if is_supported_image_file(source):
-        with open(source, "rb+") as f:
-            data = f.read()
-        return decode_data(data, mime_type)
+    mime_type = is_supported_image_file(source.name)
+    if mime_type is None:
+        raise UnsupportedImageFile(source)
+    with open(source, "rb+") as f:
+        data = f.read()
+    return decode_data(data, mime_type)
 
 
