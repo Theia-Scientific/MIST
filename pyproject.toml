@@ -25,6 +25,7 @@ classifiers = [
 ]
 dependencies = [
     "imagecodecs",
+    "natsort",
     "opencv-python",
     "pydantic",
     "pydantic-settings",

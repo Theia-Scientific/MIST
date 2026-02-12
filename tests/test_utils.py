@@ -11,7 +11,7 @@ from mist.utils import (
     NPY_MIME_TYPE,
     read_image_file,
     TIFF_MIME_TYPE,
-    UnknownMimeTypeError
+    UnsupportedImageFile,
 )
 
 @pytest.fixture
@@ -67,7 +67,7 @@ def test_correct_cv_image_normalized_random(random_float32_image):
 
 
 def test_read_image_file_fail_unknown_mime_type(unknown_image_file):
-    with pytest.raises(UnknownMimeTypeError):
+    with pytest.raises(UnsupportedImageFile):
         read_image_file(unknown_image_file)
 
 

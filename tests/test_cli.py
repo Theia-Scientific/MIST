@@ -7,8 +7,10 @@ import zipfile
 from mist import __app_name__
 from mist.cli import (
     app,
+    expand_sources,
     map_verbosity,
 )
+from pathlib import Path
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -42,6 +44,34 @@ def test_map_verbosity_false():
 def test_map_verbosity_true():
     actual = map_verbosity(True)
     assert actual == "DEBUG"
+
+
+def test_expand_sources_with_single_supported_file(blank_png):
+    actual = expand_sources([blank_png])
+    assert len(actual) == 1
+    assert blank_png in actual
+    
+
+def test_expand_sources_with_multiple_supported_files(blank_png, bus_jpg):
+    actual = expand_sources([blank_png, bus_jpg])
+    assert len(actual) == 2
+    assert blank_png in actual
+    assert bus_jpg in actual
+
+
+def test_expand_sources_with_no_supported_file(tmp_path):
+    txt_file = tmp_path.joinpath("test.txt")
+    with open(txt_file, "+w") as fp:
+        fp.write("Hello World")
+    actual = expand_sources([txt_file])
+    assert len(actual) == 0
+
+
+def test_expand_sources_with_zip_file(zip_file):
+    actual = expand_sources([zip_file])
+    assert len(actual) == 3
+    for path in actual:
+        assert isinstance(path, Path)
 
 
 def test_app_help():
