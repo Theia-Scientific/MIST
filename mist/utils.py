@@ -18,6 +18,7 @@ TIFF_MIME_TYPE: str = "image/tiff"
 
 mimetypes.add_type(NPY_MIME_TYPE, ".npy")
 
+
 class ImageDecodeError(Exception):
     pass
 
@@ -62,7 +63,7 @@ def decode_data(data: bytes, mime_type: str) -> np.ndarray:
             raise ImageDecodeError()
         return correct_cv_image(src)
 
-    
+
 def is_image_file_supported(file_name: str) -> Optional[str]:
     SUPPORTED_MIME_TYPES = [JPEG_MIME_TYPE, NPY_MIME_TYPE, PNG_MIME_TYPE, TIFF_MIME_TYPE]
     mime_type, _ = mimetypes.guess_type(file_name)
@@ -70,7 +71,7 @@ def is_image_file_supported(file_name: str) -> Optional[str]:
         return mime_type
     else:
         return None
-   
+
 
 def read_image_file(source: Path) -> np.ndarray:
     mime_type = is_image_file_supported(source.name)
@@ -79,5 +80,3 @@ def read_image_file(source: Path) -> np.ndarray:
     with open(source, "rb+") as f:
         data = f.read()
     return decode_data(data, mime_type)
-
-

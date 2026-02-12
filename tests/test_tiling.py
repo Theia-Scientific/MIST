@@ -12,5 +12,3 @@ def test_create_tiles_show(mocker, blank_image):
 
     mocker.patch("matplotlib.pyplot.figure", mock_figure)
     run(blank_image)
-
-

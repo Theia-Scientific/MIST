@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 
 runner = CliRunner()
 
+
 @pytest.fixture
 def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
     zip_path = tmp_path.joinpath("images.zip")
@@ -50,7 +51,7 @@ def test_expand_sources_with_single_supported_file(blank_png):
     actual = expand_sources([blank_png])
     assert len(actual) == 1
     assert blank_png in actual
-    
+
 
 def test_expand_sources_with_multiple_supported_files(blank_png, bus_jpg):
     actual = expand_sources([blank_png, bus_jpg])
@@ -114,11 +115,10 @@ def test_app_visualize(mock_visualizing_run, blank_png, weights_file):
     )
     assert result.exit_code == 0
 
-   
+
 def test_app_visualize_show_tiles(mock_visualizing_run, blank_png, weights_file):
     _ = mock_visualizing_run
     result = runner.invoke(
         app, ["--device=cpu", "--show-tiles", str(weights_file), str(blank_png)]
     )
     assert result.exit_code == 0
-   

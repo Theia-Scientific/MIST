@@ -30,6 +30,7 @@ DEFAULT_TILE_WIDTH: int = 640
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+
 class Stats(BaseModel):
     merged: Counter
     unmerged: Counter
@@ -137,8 +138,8 @@ def run(
         instances=instances,
         original_image=original_img,
         stats=Stats(
-            merged = Counter(instance_class_names),
-            unmerged = Counter(all_class_names)
+            merged=Counter(instance_class_names),
+            unmerged=Counter(all_class_names)
         ),
         visual_tiles=visual_tiles
     )

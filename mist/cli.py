@@ -27,7 +27,7 @@ class Result(BaseModel):
     source: str
     stats: detecting.Stats
 
-    
+
 def map_verbosity(enabled: bool) -> str:
     if enabled:
         return "DEBUG"
@@ -68,7 +68,7 @@ def expand_sources(sources: List[Path]) -> List[Path]:
                 expanded_sources.append(src)
     return expanded_sources
 
-   
+
 @app.command()
 def main(
     weights_file: Path = typer.Argument(help="The path to the YOLO weights file."),

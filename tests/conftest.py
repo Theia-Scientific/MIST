@@ -6,6 +6,7 @@ import pytest
 
 from ultralytics.utils.downloads import attempt_download_asset, download
 
+
 @pytest.fixture(scope="session")
 def assets(tmp_path_factory):
     return tmp_path_factory.mktemp("assets")
