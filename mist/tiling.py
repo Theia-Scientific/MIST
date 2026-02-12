@@ -8,6 +8,7 @@ from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+
 class Tile(BaseModel):
     img: np.ndarray
     index: int
