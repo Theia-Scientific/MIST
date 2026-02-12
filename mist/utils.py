@@ -80,5 +80,3 @@ def read_image_file(source: Path) -> np.ndarray:
     with open(source, "rb+") as f:
         data = f.read()
     return decode_data(data, mime_type)
-
-
