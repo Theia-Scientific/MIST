@@ -15,6 +15,7 @@ from typer.testing import CliRunner
 
 runner = CliRunner()
 
+
 @pytest.fixture
 def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
     zip_path = tmp_path.joinpath("images.zip")
@@ -50,7 +51,7 @@ def test_expand_sources_with_single_supported_file(blank_png):
     actual = expand_sources([blank_png])
     assert len(actual) == 1
     assert blank_png in actual
-    
+
 
 def test_expand_sources_with_multiple_supported_files(blank_png, bus_jpg):
     actual = expand_sources([blank_png, bus_jpg])
