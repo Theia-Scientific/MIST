@@ -49,17 +49,11 @@ def expand_sources(sources: List[Path]) -> List[Path]:
             with zipfile.ZipFile(src, "r") as zip_fp:
                 names = natsorted(zip_fp.namelist())
                 for name in names:
-                    mime_type = utils.is_supported_image_file(os.path.basename(name))
-                    if mime_type is None:
-                        LOGGER.info(f"The {name} item in the {src} ZIP file was skipped")
-                    else:
+                    mime_type = utils.is_image_file_supported(os.path.basename(name))
+                    if mime_type:
                         expanded_sources.append(zip_fp.extract(name, path=zip_dir))
         else:
-            mime_type = utils.is_supported_image_file(src.name)
-            if mime_type is None:
-                LOGGER.info(f"The {src} file was skipped")
-            else:
-                expanded_sources.append(src)
+            expanded_sources.append(src)
     return expanded_sources
 
    
@@ -135,6 +129,7 @@ def main(
     ),
 ):
     logging.basicConfig(level=map_verbosity(verbose))
+    LOGGER.debug(f"{version=}")
     model = YOLO(weights_file)
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
