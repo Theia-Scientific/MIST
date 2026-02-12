@@ -30,6 +30,7 @@ DEFAULT_TILE_WIDTH: int = 640
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+
 class Stats(BaseModel):
     merged: Counter
     unmerged: Counter
