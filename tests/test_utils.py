@@ -14,6 +14,7 @@ from mist.utils import (
     UnsupportedImageFile,
 )
 
+
 @pytest.fixture
 def blank_float32_image() -> np.ndarray:
     return np.zeros((4096, 4096, 3), dtype=np.float32)
@@ -90,5 +91,3 @@ def test_decode_data_fails(blank_npy):
         data = f.read()
     with pytest.raises(ImageDecodeError):
         decode_data(data, "image/jpeg")
-
-
