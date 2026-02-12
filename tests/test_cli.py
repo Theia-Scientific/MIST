@@ -7,6 +7,7 @@ import zipfile
 from mist import __app_name__
 from mist.cli import (
     app,
+    expand_sources,
     map_verbosity,
 )
 from typer.testing import CliRunner
@@ -43,6 +44,12 @@ def test_map_verbosity_true():
     actual = map_verbosity(True)
     assert actual == "DEBUG"
 
+
+def test_expand_sources_with_single_supported_file(blank_png):
+    actual = expand_sources([blank_png])
+    assert len(actual) == 1
+    assert blank_png in actual
+    
 
 def test_app_help():
     result = runner.invoke(app, ["--help"])
