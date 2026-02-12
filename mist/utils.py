@@ -63,7 +63,7 @@ def decode_data(data: bytes, mime_type: str) -> np.ndarray:
             raise ImageDecodeError()
         return correct_cv_image(src)
 
-    
+
 def is_image_file_supported(file_name: str) -> Optional[str]:
     SUPPORTED_MIME_TYPES = [JPEG_MIME_TYPE, NPY_MIME_TYPE, PNG_MIME_TYPE, TIFF_MIME_TYPE]
     mime_type, _ = mimetypes.guess_type(file_name)
