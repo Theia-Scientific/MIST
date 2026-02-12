@@ -39,4 +39,4 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pytest --color=yes --cov=mist --cov-report=term
+          pytest --color=yes --cov=mist --cov-report=term-missing
