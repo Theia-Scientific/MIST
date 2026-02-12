@@ -5,6 +5,7 @@ import pytest
 from mist import detecting, visualizing
 from ultralytics.models import YOLO
 
+
 @pytest.fixture
 def mock_plt_show(mocker):
     def mock_plt_show(*args, **kwargs):
@@ -14,7 +15,7 @@ def mock_plt_show(mocker):
         return None
 
     mocker.patch("matplotlib.pyplot.show", mock_plt_show)
-   
+
 
 def test_run(mock_plt_show, bus_jpg, weights_file):
     _ = mock_plt_show
@@ -114,5 +115,3 @@ def test_run_with_show_classes(mock_plt_show, bus_jpg, weights_file):
         show_class=True,
     )
     assert labeled_image.any()
-
-
