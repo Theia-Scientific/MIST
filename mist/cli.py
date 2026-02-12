@@ -24,7 +24,7 @@ app = typer.Typer(pretty_exceptions_show_locals=False)
 
 
 class Result(BaseModel):
-    source: Path
+    source: str
     stats: detecting.Stats
 
     
@@ -181,7 +181,7 @@ def main(
                 show_classes_list=visualize_classes,
             )
             LOGGER.info("Visualizing results...DONE")
-        results.append(Result(source=src, stats=result.stats).model_dump())
+        results.append(Result(source=str(src), stats=result.stats).model_dump())
     json.dumps(results)
 
 
