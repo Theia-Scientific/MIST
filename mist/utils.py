@@ -71,7 +71,7 @@ def is_image_file_supported(file_name: str) -> Optional[str]:
         return mime_type
     else:
         return None
-   
+
 
 def read_image_file(source: Path) -> np.ndarray:
     mime_type = is_image_file_supported(source.name)
