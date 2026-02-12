@@ -115,11 +115,10 @@ def test_app_visualize(mock_visualizing_run, blank_png, weights_file):
     )
     assert result.exit_code == 0
 
-   
+
 def test_app_visualize_show_tiles(mock_visualizing_run, blank_png, weights_file):
     _ = mock_visualizing_run
     result = runner.invoke(
         app, ["--device=cpu", "--show-tiles", str(weights_file), str(blank_png)]
     )
     assert result.exit_code == 0
-   
