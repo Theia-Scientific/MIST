@@ -12,6 +12,7 @@ from typing import List, Optional, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+
 class Tile(BaseModel):
     color: Tuple[int, int, int] = (0, 0, 255)  # BGR
     thickness: int = 3
