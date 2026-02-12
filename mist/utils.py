@@ -16,6 +16,8 @@ NPY_MIME_TYPE: str = "application/numpy"
 PNG_MIME_TYPE: str = "image/png"
 TIFF_MIME_TYPE: str = "image/tiff"
 
+mimetypes.add_type(NPY_MIME_TYPE, ".npy")
+
 class ImageDecodeError(Exception):
     pass
 

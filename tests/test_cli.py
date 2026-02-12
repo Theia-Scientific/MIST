@@ -66,6 +66,11 @@ def test_expand_sources_with_no_supported_file(tmp_path):
     assert len(actual) == 0
 
 
+def test_expand_sources_with_zip_file(zip_file):
+    actual = expand_sources([zip_file])
+    assert len(actual) == 3
+
+
 def test_app_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
