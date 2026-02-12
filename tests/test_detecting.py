@@ -5,6 +5,7 @@ import os
 from mist.detecting import run
 from ultralytics.models import YOLO
 
+
 def test_run(bus_jpg, weights_file):
     result = run(bus_jpg, YOLO(weights_file), device="cpu")
     assert len(result.class_names) > 0
