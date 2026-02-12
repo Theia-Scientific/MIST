@@ -46,6 +46,7 @@ def expand_sources(sources: List[Path]) -> List[Path]:
             pass
         elif zipfile.is_zipfile(src):
             zip_dir = tempfile.mkdtemp()
+            LOGGER.debug(f"{zip_dir=}")
             with zipfile.ZipFile(src, "r") as zip_fp:
                 names = natsorted(zip_fp.namelist())
                 for name in names:
@@ -53,7 +54,7 @@ def expand_sources(sources: List[Path]) -> List[Path]:
                     mime_type = utils.is_image_file_supported(os.path.basename(name))
                     LOGGER.debug(f"{mime_type=}")
                     if mime_type:
-                        expanded_sources.append(zip_fp.extract(name, path=zip_dir))
+                        expanded_sources.append(Path(zip_fp.extract(name, path=zip_dir)))
         else:
             mime_type = utils.is_image_file_supported(src.name)
             if mime_type:

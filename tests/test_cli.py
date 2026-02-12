@@ -10,6 +10,7 @@ from mist.cli import (
     expand_sources,
     map_verbosity,
 )
+from pathlib import Path
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -69,6 +70,8 @@ def test_expand_sources_with_no_supported_file(tmp_path):
 def test_expand_sources_with_zip_file(zip_file):
     actual = expand_sources([zip_file])
     assert len(actual) == 3
+    for path in actual:
+        assert isinstance(path, Path)
 
 
 def test_app_help():
