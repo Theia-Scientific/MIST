@@ -2,11 +2,14 @@
 
 import importlib.metadata
 import logging
+import os
+import tempfile
 import typer
 import zipfile
 
+from mist import __app_name__, detecting, utils, visualizing
+from natsort import natsorted
 from pathlib import Path
-from mist import __app_name__, detecting, visualizing
 from typing import List, Optional
 from ultralytics.models import YOLO
 
@@ -32,6 +35,34 @@ def version_callback(value: bool):
         raise typer.Exit()
 
 
+def expand_sources(sources: List[Path]) -> List[Path]:
+    expanded_sources = []
+    for source in sources:
+        LOGGER.debug(f"{source=}")
+        src = source.expanduser().resolve()
+        LOGGER.debug(f"{src=}")
+        if src.is_dir():
+            # TODO: Add support for running inference on folder of images
+            pass
+        elif zipfile.is_zipfile(src):
+            zip_dir = tempfile.mkdtemp()
+            with zipfile.ZipFile(src, "r") as zip_fp:
+                names = natsorted(zip_fp.namelist())
+                for name in names:
+                    mime_type = utils.is_supported_image_file(os.path.basename(name))
+                    if mime_type is None:
+                        LOGGER.info(f"The {name} item in the {src} ZIP file was skipped")
+                    else:
+                        expanded_sources.append(zip_fp.extract(name, path=zip_dir))
+        else:
+            mime_type = utils.is_supported_image_file(src.name)
+            if mime_type is None:
+                LOGGER.info(f"The {src} file was skipped")
+            else:
+                expanded_sources.append(src)
+    return expanded_sources
+
+   
 @app.command()
 def main(
     weights_file: Path = typer.Argument(help="The path to the YOLO weights file."),
@@ -104,57 +135,45 @@ def main(
     ),
 ):
     logging.basicConfig(level=map_verbosity(verbose))
-    LOGGER.debug(f"version={version}")
-    LOGGER.debug(f"weights_file={weights_file}")
     model = YOLO(weights_file)
-    for source in sources:
-        LOGGER.debug(f"source={sources}")
-        src = source.expanduser().resolve()
-        LOGGER.debug(f"src={src}")
-        if src.is_dir():
-            # TODO: Add support for running inference on folder of images
-            pass
-        elif zipfile.is_zipfile(src):
-            # TODO: Add support for running inference on ZIP archive
-            pass
-        else:
-            LOGGER.info("Detecting...")
-            result = detecting.run(
-                src,
-                model,
-                device,
-                dump_masks=dump_masks,
-                dump_masks_to=dump_masks_to,
-                inference_confidence=inference_confidence,
-                inference_image_size=inference_image_size,
-                inference_iou=inference_iou,
-                inference_max_detections=inference_max_detections,
-                inference_silent=inference_silent,
-                merge_classes=merge_classes,
-                overlap_height=overlap_height,
-                overlap_width=overlap_width,
-                tile_height=tile_height,
-                tile_width=tile_width,
-                logger=LOGGER
-            )
-            LOGGER.info("Detecting...DONE")
-            print(result.stats.model_dump_json())
-            if show:
-                LOGGER.info("Visualizing results...")
+    for src in expand_sources(sources):
+        LOGGER.info("Detecting...")
+        result = detecting.run(
+            src,
+            model,
+            device,
+            dump_masks=dump_masks,
+            dump_masks_to=dump_masks_to,
+            inference_confidence=inference_confidence,
+            inference_image_size=inference_image_size,
+            inference_iou=inference_iou,
+            inference_max_detections=inference_max_detections,
+            inference_silent=inference_silent,
+            merge_classes=merge_classes,
+            overlap_height=overlap_height,
+            overlap_width=overlap_width,
+            tile_height=tile_height,
+            tile_width=tile_width,
+            logger=LOGGER
+        )
+        LOGGER.info("Detecting...DONE")
+        print(result.stats.model_dump_json())
+        if show:
+            LOGGER.info("Visualizing results...")
+            visual_tiles = []
+            if show_tiles:
+                visual_tiles = result.visual_tiles
+            else:
                 visual_tiles = []
-                if show_tiles:
-                    visual_tiles = result.visual_tiles
-                else:
-                    visual_tiles = []
-                visualizing.run(
-                    result.instances,
-                    result.original_image,
-                    result.class_names,
-                    tiles=visual_tiles,
-                    random_object_colors=random_object_colors,
-                    show_classes_list=visualize_classes,
-                )
-                LOGGER.info("Visualizing results...DONE")
+            visualizing.run(
+                result.instances,
+                result.original_image,
+                result.class_names,
+                tiles=visual_tiles,
+                random_object_colors=random_object_colors,
+                show_classes_list=visualize_classes,
+            )
+            LOGGER.info("Visualizing results...DONE")
 
 
 if __name__ == "__main__":
