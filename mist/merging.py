@@ -13,6 +13,7 @@ from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+
 class Mask(BaseModel):
     data: np.ndarray
     offset_x: int
