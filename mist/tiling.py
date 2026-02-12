@@ -65,5 +65,3 @@ def run(
         y_min = y_max - y_overlap
         logger.debug(f"{y_min=}")
     return tiles
-
-
