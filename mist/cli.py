@@ -55,7 +55,9 @@ def expand_sources(sources: List[Path]) -> List[Path]:
                     if mime_type:
                         expanded_sources.append(zip_fp.extract(name, path=zip_dir))
         else:
-            expanded_sources.append(src)
+            mime_type = utils.is_image_file_supported(src.name)
+            if mime_type:
+                expanded_sources.append(src)
     return expanded_sources
 
    

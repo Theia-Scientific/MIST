@@ -51,6 +51,21 @@ def test_expand_sources_with_single_supported_file(blank_png):
     assert blank_png in actual
     
 
+def test_expand_sources_with_multiple_supported_files(blank_png, bus_jpg):
+    actual = expand_sources([blank_png, bus_jpg])
+    assert len(actual) == 2
+    assert blank_png in actual
+    assert bus_jpg in actual
+
+
+def test_expand_sources_with_no_supported_file(tmp_path):
+    txt_file = tmp_path.joinpath("test.txt")
+    with open(txt_file, "+w") as fp:
+        fp.write("Hello World")
+    actual = expand_sources([txt_file])
+    assert len(actual) == 0
+
+
 def test_app_help():
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
