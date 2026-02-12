@@ -97,5 +97,3 @@ def run(
                 instance_id += 1
     logger.debug(f"instances count = {len(instances)}")
     return instances
-
-
