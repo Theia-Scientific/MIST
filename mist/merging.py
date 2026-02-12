@@ -60,8 +60,8 @@ def run(
             logger.debug(f"class_mask.shape = {class_mask.shape}")
             for i, mask in enumerate(class_masks):
                 class_mask[
-                    mask.offset_y : mask.offset_y + tile_height,
-                    mask.offset_x : mask.offset_x + tile_width,
+                    mask.offset_y:mask.offset_y + tile_height,
+                    mask.offset_x:mask.offset_x + tile_width,
                 ] += mask.data
                 if dump_masks:
                     dst = dump_masks_to.joinpath(str(cls_index_int))
