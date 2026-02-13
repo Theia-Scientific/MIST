@@ -49,8 +49,13 @@ def expand_sources(sources: List[Path]) -> List[Path]:
         src = source.expanduser().resolve()
         LOGGER.debug(f"{src=}")
         if src.is_dir():
-            # TODO: Add support for running inference on folder of images
-            pass
+            expanded_sources.extend(
+                [
+                    src.joinpath(path)
+                    for path in os.listdir(src)
+                    if utils.is_image_file_supported(path)
+                ]
+            )
         elif zipfile.is_zipfile(src):
             zip_dir = tempfile.mkdtemp()
             LOGGER.debug(f"{zip_dir=}")
@@ -61,7 +66,9 @@ def expand_sources(sources: List[Path]) -> List[Path]:
                     mime_type = utils.is_image_file_supported(os.path.basename(name))
                     LOGGER.debug(f"{mime_type=}")
                     if mime_type:
-                        expanded_sources.append(Path(zip_fp.extract(name, path=zip_dir)))
+                        expanded_sources.append(
+                            Path(zip_fp.extract(name, path=zip_dir))
+                        )
         else:
             mime_type = utils.is_image_file_supported(src.name)
             if mime_type:
@@ -162,7 +169,7 @@ def main(
             overlap_width=overlap_width,
             tile_height=tile_height,
             tile_width=tile_width,
-            logger=LOGGER
+            logger=LOGGER,
         )
         LOGGER.info("Detecting...DONE")
         if show:

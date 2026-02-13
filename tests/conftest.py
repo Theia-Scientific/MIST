@@ -33,6 +33,13 @@ def blank_image() -> np.ndarray:
 
 
 @pytest.fixture
+def blank_jpg(blank_image, tmp_path):
+    jpg_file = tmp_path.joinpath("image.jpg")
+    cv2.imwrite(str(jpg_file), blank_image)
+    yield jpg_file
+
+
+@pytest.fixture
 def blank_npy(blank_image, tmp_path):
     npy_file = tmp_path.joinpath("image.npy")
     np.save(npy_file, blank_image)
