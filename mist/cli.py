@@ -50,7 +50,11 @@ def expand_sources(sources: List[Path]) -> List[Path]:
         LOGGER.debug(f"{src=}")
         if src.is_dir():
             expanded_sources.extend(
-                [src.joinpath(p) for p in os.listdir(src) if src.joinpath(p).is_file()]
+                [
+                    src.joinpath(path)
+                    for path in os.listdir(src)
+                    if utils.is_image_file_supported(path)
+                ]
             )
         elif zipfile.is_zipfile(src):
             zip_dir = tempfile.mkdtemp()

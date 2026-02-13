@@ -18,9 +18,18 @@ runner = CliRunner()
 
 
 @pytest.fixture
-def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
+def text_file(tmp_path):
+    txt_file = tmp_path.joinpath("test.txt")
+    with open(txt_file, "+w") as fp:
+        fp.write("Hello World")
+    yield txt_file
+
+
+@pytest.fixture
+def zip_file(blank_jpg, blank_png, blank_npy, blank_tif, tmp_path):
     zip_path = tmp_path.joinpath("images.zip")
     with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.write(blank_jpg)
         zf.write(blank_png)
         zf.write(blank_npy)
         zf.write(blank_tif)
@@ -28,10 +37,23 @@ def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
 
 
 @pytest.fixture
-def dir_with_images(blank_png, blank_npy, blank_tif, tmp_path):
+def dir_with_images(blank_jpg, blank_png, blank_npy, blank_tif, tmp_path):
+    shutil.move(blank_jpg, tmp_path.joinpath("image0.jpg"))
     shutil.move(blank_png, tmp_path.joinpath("image1.png"))
     shutil.move(blank_npy, tmp_path.joinpath("image2.npy"))
     shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
+    return tmp_path
+
+
+@pytest.fixture
+def dir_with_images_and_text(
+    blank_jpg, blank_png, blank_npy, blank_tif, text_file, tmp_path
+):
+    shutil.move(blank_jpg, tmp_path.joinpath("image0.jpg"))
+    shutil.move(blank_png, tmp_path.joinpath("image1.png"))
+    shutil.move(blank_npy, tmp_path.joinpath("image2.npy"))
+    shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
+    shutil.move(text_file, tmp_path.joinpath("text.txt"))
     return tmp_path
 
 
@@ -69,24 +91,28 @@ def test_expand_sources_with_multiple_supported_files(blank_png, bus_jpg):
     assert bus_jpg in actual
 
 
-def test_expand_sources_with_no_supported_file(tmp_path):
-    txt_file = tmp_path.joinpath("test.txt")
-    with open(txt_file, "+w") as fp:
-        fp.write("Hello World")
-    actual = expand_sources([txt_file])
+def test_expand_sources_with_no_supported_file(text_file):
+    actual = expand_sources([text_file])
     assert len(actual) == 0
 
 
 def test_expand_sources_with_zip_file(zip_file):
     paths = expand_sources([zip_file])
-    assert len(paths) == 3
+    assert len(paths) == 4
     for path in paths:
         assert isinstance(path, Path)
 
 
 def test_expand_sources_with_directory(dir_with_images):
     paths = expand_sources([dir_with_images])
-    assert len(paths) == 3
+    assert len(paths) == 4
+    for path in paths:
+        assert isinstance(path, Path)
+
+
+def test_expand_sources_with_directory_unsupported(dir_with_images_and_text):
+    paths = expand_sources([dir_with_images_and_text])
+    assert len(paths) == 4
     for path in paths:
         assert isinstance(path, Path)
 
