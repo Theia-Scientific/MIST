@@ -49,7 +49,7 @@ def expand_sources(sources: List[Path]) -> List[Path]:
         src = source.expanduser().resolve()
         LOGGER.debug(f"{src=}")
         if src.is_dir():
-            sources.extend(
+            expanded_sources.extend(
                 [src.joinpath(p) for p in os.listdir(src) if src.joinpath(p).is_file()]
             )
         elif zipfile.is_zipfile(src):

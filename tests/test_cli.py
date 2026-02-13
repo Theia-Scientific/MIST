@@ -2,6 +2,7 @@
 
 import importlib.metadata
 import pytest
+import shutil
 import zipfile
 
 from mist import __app_name__
@@ -24,6 +25,14 @@ def zip_file(blank_png, blank_npy, blank_tif, tmp_path):
         zf.write(blank_npy)
         zf.write(blank_tif)
     yield zip_path
+
+
+@pytest.fixture
+def dir_with_images(blank_png, blank_npy, blank_tif, tmp_path):
+    shutil.move(blank_png, tmp_path.joinpath("image1.png"))
+    shutil.move(blank_npy, tmp_path.joinpath("image2.npy"))
+    shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
+    return tmp_path
 
 
 @pytest.fixture
@@ -69,9 +78,16 @@ def test_expand_sources_with_no_supported_file(tmp_path):
 
 
 def test_expand_sources_with_zip_file(zip_file):
-    actual = expand_sources([zip_file])
-    assert len(actual) == 3
-    for path in actual:
+    paths = expand_sources([zip_file])
+    assert len(paths) == 3
+    for path in paths:
+        assert isinstance(path, Path)
+
+
+def test_expand_sources_with_directory(dir_with_images):
+    paths = expand_sources([dir_with_images])
+    assert len(paths) == 3
+    for path in paths:
         assert isinstance(path, Path)
 
 
@@ -94,9 +110,9 @@ def test_app_image(blank_png, weights_file):
     assert result.exit_code == 0
 
 
-def test_app_directory(tmp_path, weights_file):
+def test_app_directory(dir_with_images, weights_file):
     result = runner.invoke(
-        app, ["--device=cpu", "--no-show", str(weights_file), str(tmp_path)]
+        app, ["--device=cpu", "--no-show", str(weights_file), str(dir_with_images)]
     )
     assert result.exit_code == 0
 
@@ -110,9 +126,7 @@ def test_app_zip(zip_file, weights_file):
 
 def test_app_visualize(mock_visualizing_run, blank_png, weights_file):
     _ = mock_visualizing_run
-    result = runner.invoke(
-        app, ["--device=cpu", str(weights_file), str(blank_png)]
-    )
+    result = runner.invoke(app, ["--device=cpu", str(weights_file), str(blank_png)])
     assert result.exit_code == 0
 
 
