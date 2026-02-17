@@ -29,7 +29,6 @@ dependencies = [
     "opencv-python",
     "pydantic",
     "pydantic-settings",
-    "python-dotenv",
     "tifffile",
     "ultralytics",
 ]
