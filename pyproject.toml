@@ -42,6 +42,7 @@ build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 dev = [
+    "black",
     "build",
     "flake8",
     "hatch",
