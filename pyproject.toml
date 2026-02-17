@@ -30,9 +30,7 @@ dependencies = [
     "pydantic",
     "pydantic-settings",
     "python-dotenv",
-    "PyQt6",
     "tifffile",
-    "typer",
     "ultralytics",
 ]
 
@@ -53,6 +51,7 @@ dev = [
     "pytest-mock",
     "twine"
 ]
+cli = ["matplotlib", "PyQt6", "typer"]
 
 [project.scripts]
 mist = "mist.cli:app"
