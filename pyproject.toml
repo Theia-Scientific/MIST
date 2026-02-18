@@ -28,11 +28,7 @@ dependencies = [
     "natsort",
     "opencv-python",
     "pydantic",
-    "pydantic-settings",
-    "python-dotenv",
-    "PyQt6",
     "tifffile",
-    "typer",
     "ultralytics",
 ]
 
@@ -42,16 +38,17 @@ build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 dev = [
+    "black",
     "build",
     "flake8",
     "hatch",
     "isort",
     "pytest",
     "pytest-cov",
-    "pytest-env",
     "pytest-mock",
     "twine"
 ]
+cli = ["matplotlib", "PyQt6", "typer"]
 
 [project.scripts]
 mist = "mist.cli:app"
