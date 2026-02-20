@@ -29,7 +29,6 @@ dependencies = [
     "opencv-python",
     "pydantic",
     "tifffile",
-    "ultralytics",
 ]
 
 [build-system]
@@ -49,6 +48,7 @@ dev = [
     "twine"
 ]
 cli = ["matplotlib", "PyQt6", "typer"]
+yolo = ["ultralytics"]
 
 [project.scripts]
 mist = "mist.cli:app"
