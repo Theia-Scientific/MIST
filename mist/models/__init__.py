@@ -23,10 +23,10 @@ class Inference(ABC):
         offset_y: int,
         tile_height: int,
         tile_width: int,
-    ) -> Result:  # pragma: no cover
+    ) -> Result:
         pass
 
     @property
     @abstractmethod
-    def names(self) -> List[str]:  # pragma: no cover
+    def names(self) -> List[str]:
         pass
