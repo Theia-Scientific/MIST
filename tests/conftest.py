@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import pytest
 
+from mist.models import Inference, yolo
 from ultralytics.utils.downloads import attempt_download_asset, download
 
 
@@ -58,3 +59,8 @@ def blank_tif(blank_image, tmp_path):
     tif_file = tmp_path.joinpath("image.tif")
     cv2.imwrite(str(tif_file), blank_image)
     yield tif_file
+
+
+@pytest.fixture(scope="session")
+def model(weights_file) -> Inference:
+    return yolo.Model(weights_file, device="cpu")

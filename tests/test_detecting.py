@@ -1,15 +1,8 @@
 #!/usr/bin/env python3
 
 import os
-import pytest
 
 from mist.detecting import run
-from mist.models import Inference, yolo
-
-
-@pytest.fixture
-def model(weights_file) -> Inference:
-    return yolo.Model(weights_file, device="cpu")
 
 
 def test_run(bus_jpg, model):
