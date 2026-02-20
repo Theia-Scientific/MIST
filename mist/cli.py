@@ -8,7 +8,8 @@ import tempfile
 import typer
 import zipfile
 
-from mist import __app_name__, detecting, models, utils, visualizing
+from mist import __app_name__, detecting, utils, visualizing
+from mist.models import yolo
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
@@ -83,10 +84,11 @@ def main(
     ),
     device: str = typer.Option("cuda:0", help="The device to use for inference."),
     dump_masks: bool = typer.Option(
-        False, help="Creates PNGs of masks during merging."
+        detecting.DEFAULT_DUMP_MASKS, help="Creates PNGs of masks during merging."
     ),
     dump_masks_to: Path = typer.Option(
-        Path("tmp"), help="Location to create PNGs of masks during merging."
+        detecting.DEFAULT_DUMP_MASKS_TO,
+        help="Location to create PNGs of masks during merging.",
     ),
     inference_confidence: float = typer.Option(
         0.35, help="The confidence threshold as a ratio between 0.0. and 1.0."
@@ -104,17 +106,17 @@ def main(
         False, help="Silence the output for inference."
     ),
     merge_classes: List[int] = typer.Option(
-        [],
+        detecting.DEFAULT_MERGE_CLASSES,
         "--merge-class",
         "-c",
         help="Only merge instances with these class indices.",
     ),
     overlap_height: float = typer.Option(
-        0.2,
+        detecting.DEFAULT_OVERLAP_HEIGHT,
         help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
     ),
     overlap_width: float = typer.Option(
-        0.2,
+        detecting.DEFAULT_OVERLAP_WIDTH,
         help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
     ),
     random_object_colors: bool = typer.Option(
@@ -123,8 +125,12 @@ def main(
     ),
     show: bool = typer.Option(True, help="Show visualization"),
     show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
-    tile_height: int = typer.Option(640, help="The height of a tile in pixels."),
-    tile_width: int = typer.Option(640, help="The width of a tile in pixels."),
+    tile_height: int = typer.Option(
+        detecting.DEFAULT_TILE_HEIGHT, help="The height of a tile in pixels."
+    ),
+    tile_width: int = typer.Option(
+        detecting.DEFAULT_TILE_WIDTH, help="The width of a tile in pixels."
+    ),
     visualize_classes: List[int] = typer.Option(
         [],
         "--visualize-classes",
@@ -148,7 +154,7 @@ def main(
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"{version=}")
-    model = models.yolo.Model(
+    model = yolo.Model(
         weights_file,
         inference_confidence,
         device,
