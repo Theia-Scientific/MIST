@@ -8,12 +8,11 @@ import tempfile
 import typer
 import zipfile
 
-from mist import __app_name__, detecting, utils, visualizing
+from mist import __app_name__, detecting, models, utils, visualizing
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
 from typing import List, Optional
-from ultralytics.models import YOLO
 
 logging.getLogger("matplotlib.font_manager").disabled = True
 
@@ -149,21 +148,23 @@ def main(
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"{version=}")
-    model = YOLO(weights_file)
+    model = models.yolo.Model(
+        weights_file,
+        inference_confidence,
+        device,
+        inference_image_size,
+        inference_iou,
+        inference_max_detections,
+        inference_silent,
+    )
     results = []
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
         result = detecting.run(
             src,
             model,
-            device,
             dump_masks=dump_masks,
             dump_masks_to=dump_masks_to,
-            inference_confidence=inference_confidence,
-            inference_image_size=inference_image_size,
-            inference_iou=inference_iou,
-            inference_max_detections=inference_max_detections,
-            inference_silent=inference_silent,
             merge_classes=merge_classes,
             overlap_height=overlap_height,
             overlap_width=overlap_width,
