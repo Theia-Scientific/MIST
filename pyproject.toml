@@ -47,8 +47,7 @@ dev = [
     "pytest-mock",
     "twine"
 ]
-cli = ["matplotlib", "PyQt6", "typer"]
-yolo = ["ultralytics"]
+cli = ["matplotlib", "PyQt6", "typer", "ultralytics"]
 
 [project.scripts]
 mist = "mist.cli:app"
