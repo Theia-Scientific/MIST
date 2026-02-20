@@ -8,17 +8,24 @@ from pathlib import Path
 from typing import Union, List
 from ultralytics.models import YOLO
 
+DEFAULT_CONFIDENCE: float = 0.35
+DEFAULT_DEVICE: str = "cuda:0"
+DEFAULT_IOU: float = 0.7
+DEFAULT_IMAGE_SIZE: int = 640
+DEFAULT_MAX_DETECTIONS: int = 1000
+DEFAULT_SILENT: bool = False
+
 
 class Model(Inference):
     def __init__(
         self,
         weights_file: Union[Path, str],
-        confidence: float,
-        device: str,
-        image_size: int,
-        iou: float,
-        max_detections: int,
-        silent: bool,
+        confidence: float = DEFAULT_CONFIDENCE,
+        device: str = DEFAULT_DEVICE,
+        image_size: int = DEFAULT_IMAGE_SIZE,
+        iou: float = DEFAULT_IOU,
+        max_detections: int = DEFAULT_MAX_DETECTIONS,
+        silent: bool = DEFAULT_SILENT,
     ):
         self.device = device
         self.confidence = confidence

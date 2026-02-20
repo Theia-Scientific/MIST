@@ -91,19 +91,21 @@ def main(
         help="Location to create PNGs of masks during merging.",
     ),
     inference_confidence: float = typer.Option(
-        0.35, help="The confidence threshold as a ratio between 0.0. and 1.0."
+        yolo.DEFAULT_CONFIDENCE,
+        help="The confidence threshold as a ratio between 0.0. and 1.0.",
     ),
     inference_iou: float = typer.Option(
-        0.7, help="The Intersection-over-Union for inference."
+        yolo.DEFAULT_IOU, help="The Intersection-over-Union for inference."
     ),
     inference_image_size: int = typer.Option(
-        640, help="The size of the image for the YOLO model."
+        yolo.DEFAULT_IMAGE_SIZE, help="The size of the image for the YOLO model."
     ),
     inference_max_detections: int = typer.Option(
-        1000, help="The maximum number of detections for inference."
+        yolo.DEFAULT_MAX_DETECTIONS,
+        help="The maximum number of detections for inference.",
     ),
     inference_silent: bool = typer.Option(
-        False, help="Silence the output for inference."
+        yolo.DEFAULT_SILENT, help="Silence the output for inference."
     ),
     merge_classes: List[int] = typer.Option(
         detecting.DEFAULT_MERGE_CLASSES,
