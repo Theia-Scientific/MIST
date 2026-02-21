@@ -29,7 +29,6 @@ dependencies = [
     "opencv-python",
     "pydantic",
     "tifffile",
-    "ultralytics",
 ]
 
 [build-system]
@@ -48,7 +47,7 @@ dev = [
     "pytest-mock",
     "twine"
 ]
-cli = ["matplotlib", "PyQt6", "typer"]
+cli = ["matplotlib", "PyQt6", "typer", "ultralytics"]
 
 [project.scripts]
 mist = "mist.cli:app"
@@ -59,5 +58,9 @@ Source = "https://github.com/Theia-Scientific/mist"
 Tracker = "https://github.com/Theia-Scientific/mist/issues"
 
 [tool.coverage.report]
-exclude_lines = [ "if __name__ == .__main__.:" ]
+exclude_lines = [
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "@abc.abstractmethod"
+]
 omit = [ "__main__.py" ]

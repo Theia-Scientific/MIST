@@ -5,22 +5,16 @@ import numpy as np
 
 from collections import Counter
 from mist import merging, tiling
+from mist.models import Inference
 from mist.instances import Instance
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
-from ultralytics.models import YOLO
 from typing import List
 
-DEFAULT_DEVICE: str = "cuda:0"
 DEFAULT_DUMP_MASKS: bool = False
 DEFAULT_DUMP_MASKS_TO: Path = Path("tmp")
-DEFAULT_INFERENCE_CONFIDENCE: float = 0.35
-DEFAULT_INFERENCE_IMAGE_SIZE: int = 640
-DEFAULT_INFERENCE_IOU: float = 0.7
-DEFAULT_INFERENCE_MAX_DETECTIONS: int = 1000
-DEFAULT_INFERENCE_SILENT: bool = False
 DEFAULT_MERGE_CLASSES: List[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
 DEFAULT_OVERLAP_WIDTH: float = 0.2
@@ -48,21 +42,15 @@ class Result(BaseModel):
 
 def run(
     src: Path,
-    model: YOLO,
-    device: str = DEFAULT_DEVICE,
+    model: Inference,
     dump_masks: bool = DEFAULT_DUMP_MASKS,
     dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
-    inference_confidence: float = DEFAULT_INFERENCE_CONFIDENCE,
-    inference_image_size: int = DEFAULT_INFERENCE_IMAGE_SIZE,
-    inference_iou: float = DEFAULT_INFERENCE_IOU,
-    inference_max_detections: int = DEFAULT_INFERENCE_MAX_DETECTIONS,
-    inference_silent: bool = DEFAULT_INFERENCE_SILENT,
     merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
-    logger: logging.Logger = LOGGER
+    logger: logging.Logger = LOGGER,
 ) -> Result:
     logger.info("Reading image file...")
     original_img = read_image_file(src)
@@ -81,35 +69,10 @@ def run(
     visual_tiles = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
-        results = model(
-            tile.img,
-            agnostic_nms=False,
-            device=device,
-            classes=None,
-            conf=inference_confidence,
-            half=False,
-            imgsz=inference_image_size,
-            iou=inference_iou,
-            max_det=inference_max_detections,
-            retina_masks=True,
-            verbose=not inference_silent,
-        )
+        result = model(tile.img, tile.x_start, tile.y_start, tile_height, tile_width)
+        masks.extend(result.masks)
+        class_indices.extend(result.class_indices)
         logger.info(f"Running inference on {index} tile...DONE")
-        pred = results[0]
-        tile_class_indices = pred.boxes.cls.cpu().int().tolist()
-        class_indices.extend(tile_class_indices)
-        if pred.masks is None:
-            masks_data = np.zeros(
-                (len(tile_class_indices), tile_height, tile_width)
-            )
-        else:
-            masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
-        for data in masks_data:
-            masks.append(
-                merging.Mask(
-                    data=data, offset_x=tile.x_start, offset_y=tile.y_start
-                )
-            )
         visual_tiles.append(
             VisualTile(
                 x_min=tile.x_start,
@@ -129,7 +92,7 @@ def run(
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")
-    class_names = [name for _, name in sorted(model.names.items())]
+    class_names = model.names
     logger.debug(f"class_names={class_names}")
     all_class_names = [class_names[i] for i in class_indices]
     instance_class_names = [class_names[i.class_index] for i in instances]
@@ -138,8 +101,7 @@ def run(
         instances=instances,
         original_image=original_img,
         stats=Stats(
-            merged=Counter(instance_class_names),
-            unmerged=Counter(all_class_names)
+            merged=Counter(instance_class_names), unmerged=Counter(all_class_names)
         ),
-        visual_tiles=visual_tiles
+        visual_tiles=visual_tiles,
     )
