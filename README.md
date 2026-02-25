@@ -206,7 +206,7 @@ brew update && brew upgrade pipx
 2. Install `mist` command globally for all users.
 
    ```sh
-   sudo pipx install --global --python python3.11 mist
+   sudo pipx install --global --python python3.11 "mist[cli]"
    ```
    
 3. Verify `mist` command is available.
@@ -260,7 +260,7 @@ brew update && brew upgrade pipx
    the `mist` command within the virtual environment. 
 
    ```sh
-   python3 -m pip install -e .
+   python3 -m pip install -e ".[cli]"
    ```
 
 ## Upgrade
@@ -326,13 +326,77 @@ brew update && brew upgrade pipx
 
 <a name="usage-terminal"></a>
 
-TODO: Add steps
+Using the Ultralytics YOLOv8 model:
+
+```sh
+mist yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
+```
+
+For running on macOS:
+
+```sh
+mist --device=mps yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
+```
 
 ### Python
 
 <a name="usage-python"></a>
 
-TODO: Add steps
+Using an Ultralytics YOLO segmentation model and defaults.
+
+```python
+from mist import detecting
+from mist.models import yolo
+from pathlib import Path
+
+results = detecting.run(
+    Path("/path/to/image.jpg"), 
+    yolo.Model(Path("/path/to/weights/yolov8n-seg.pt"))
+)
+print(results)
+```
+
+Using a custom model.
+
+```python
+import numpy as np
+
+from mist import detecting
+from mist.models import Inference, Result
+from pathlib import Path
+
+# Start by defining the model. A class must inherit the `Inferece` class and 
+# implement the `names` property and the `__call__` method, i.e., the class 
+# must be "callable" and return a `Result`.
+class CustomModel(Inference):
+    def __init__(
+        self,
+    ):
+        pass
+
+    @property
+    def names(self) -> List[str]:
+        return ["object"]
+        
+    def __call__(
+        self,
+        image: np.ndarray,
+        offset_x: int,
+        offset_y: int,
+        tile_height: int,
+        tile_width: int,
+    ) -> Result:
+        return Result(
+            class_indices=[],
+            masks=[],
+        )
+        
+results = detecting.run(
+    Path("/path/to/image.jpg"), 
+    CustomModel()
+)
+print(results)
+```
 
 ## Contributing
 
@@ -370,7 +434,7 @@ TODO: Add steps
    dependencies.
 
    ```sh
-   python3 -m pip install -e ".[dev]"
+   python3 -m pip install -e ".[cli,dev]"
    ```
 
 5. Create a local branch.
@@ -404,7 +468,7 @@ TODO: Add steps
 
 ## License
 
-Copyright (C) 2025 Theia Scientific, LLC. All rights reserved.
+Copyright (C) 2025-2026 Theia Scientific, LLC. All rights reserved.
 
 [dask_relabeling]: https://github.com/TheJacksonLaboratory/dask_relabeling
 [deadsnakes]: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa

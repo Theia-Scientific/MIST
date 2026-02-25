@@ -65,7 +65,12 @@ def decode_data(data: bytes, mime_type: str) -> np.ndarray:
 
 
 def is_image_file_supported(file_name: str) -> Optional[str]:
-    SUPPORTED_MIME_TYPES = [JPEG_MIME_TYPE, NPY_MIME_TYPE, PNG_MIME_TYPE, TIFF_MIME_TYPE]
+    SUPPORTED_MIME_TYPES = [
+        JPEG_MIME_TYPE,
+        NPY_MIME_TYPE,
+        PNG_MIME_TYPE,
+        TIFF_MIME_TYPE,
+    ]
     mime_type, _ = mimetypes.guess_type(file_name)
     if mime_type in SUPPORTED_MIME_TYPES:
         return mime_type
