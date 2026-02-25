@@ -326,14 +326,16 @@ brew update && brew upgrade pipx
 
 <a name="usage-terminal"></a>
 
+Using the Ultralytics YOLOv8 model:
+
 ```sh
-mist ./yolov8n-seg.pt example.jpg
+mist yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
 ```
 
 For running on macOS:
 
 ```sh
-mist --device=mps ./yolov8n-seg.pt example.jpg
+mist --device=mps yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
 ```
 
 ### Python
