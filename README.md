@@ -206,7 +206,7 @@ brew update && brew upgrade pipx
 2. Install `mist` command globally for all users.
 
    ```sh
-   sudo pipx install --global --python python3.11 mist
+   sudo pipx install --global --python python3.11 "mist[cli]"
    ```
    
 3. Verify `mist` command is available.
@@ -260,7 +260,7 @@ brew update && brew upgrade pipx
    the `mist` command within the virtual environment. 
 
    ```sh
-   python3 -m pip install -e .
+   python3 -m pip install -e ".[cli]"
    ```
 
 ## Upgrade
@@ -434,7 +434,7 @@ print(results)
    dependencies.
 
    ```sh
-   python3 -m pip install -e ".[dev]"
+   python3 -m pip install -e ".[cli,dev]"
    ```
 
 5. Create a local branch.
