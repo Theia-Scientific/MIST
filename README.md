@@ -468,7 +468,7 @@ print(results)
 
 ## License
 
-Copyright (C) 2025 Theia Scientific, LLC. All rights reserved.
+Copyright (C) 2025-2026 Theia Scientific, LLC. All rights reserved.
 
 [dask_relabeling]: https://github.com/TheJacksonLaboratory/dask_relabeling
 [deadsnakes]: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
