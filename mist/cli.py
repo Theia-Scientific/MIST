@@ -82,7 +82,9 @@ def main(
     sources: List[Path] = typer.Argument(
         help="The images to run tiled inference with the weights file."
     ),
-    device: str = typer.Option("cuda:0", help="The device to use for inference."),
+    device: str = typer.Option(
+        "cuda:0", help="The device to use for inference. Use 'mps' for Apple Silicon."
+    ),
     dump_masks: bool = typer.Option(
         detecting.DEFAULT_DUMP_MASKS, help="Creates PNGs of masks during merging."
     ),
