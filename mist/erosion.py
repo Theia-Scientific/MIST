@@ -7,7 +7,7 @@ DEFAULT_ITERATIONS: int = 1
 DEFAULT_SIZE: int = 3
 
 
-class Erosion(BaseModel):
-    enabled: bool = False
-    iterations: int = 1
-    size: int = 3
+class Configuration(BaseModel):
+    enabled: bool = DEFAULT_ENABLED
+    iterations: int = DEFAULT_ITERATIONS
+    size: int = DEFAULT_SIZE

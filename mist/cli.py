@@ -8,7 +8,7 @@ import tempfile
 import typer
 import zipfile
 
-from mist import __app_name__, detecting, utils, visualizing
+from mist import __app_name__, detecting, erosion, utils, visualizing
 from mist.models import yolo
 from natsort import natsorted
 from pathlib import Path
@@ -93,15 +93,21 @@ def main(
         help="Location to create PNGs of masks during merging.",
     ),
     erosion_enabled: bool = typer.Option(
-        False,
+        erosion.DEFAULT_ENABLED,
         help="Enable an erode morphological operation on each instance mask before merging.",
     ),
     erosion_iteration: int = typer.Option(
-        1, help="Number of erode operations to execute. Ignored if erosion is disabled."
+        erosion.DEFAULT_ITERATIONS,
+        help=(
+            "Number of erode operations to execute. Ignored if erosion is " "disabled."
+        ),
     ),
     erosion_size: int = typer.Option(
-        3,
-        help="Size of the square kernel to use during the erosion operation. Ignored if erosion is disabled.",
+        erosion.DEFAULT_SIZE,
+        help=(
+            "Size of the square kernel to use during the erosion operation. "
+            "Ignored if erosion is disabled."
+        ),
     ),
     inference_confidence: float = typer.Option(
         yolo.DEFAULT_CONFIDENCE,
@@ -184,6 +190,9 @@ def main(
         result = detecting.run(
             src,
             model,
+            erosion=erosion.Configuration(
+                enabled=erosion_enabled, iterations=erosion_iteration, size=erosion_size
+            ),
             dump_masks=dump_masks,
             dump_masks_to=dump_masks_to,
             merge_classes=merge_classes,
