@@ -7,17 +7,12 @@ import os
 import torch
 
 from pathlib import Path
+from mist.erosion import Erosion
 from mist.instances import Instance
 from pydantic import BaseModel, ConfigDict
 from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
-
-
-class Erosion(BaseModel):
-    enabled: bool = False
-    iterations: int = 1
-    size: int = 3
 
 
 class Mask(BaseModel):

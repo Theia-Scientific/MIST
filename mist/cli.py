@@ -92,6 +92,17 @@ def main(
         detecting.DEFAULT_DUMP_MASKS_TO,
         help="Location to create PNGs of masks during merging.",
     ),
+    erosion_enabled: bool = typer.Option(
+        False,
+        help="Enable an erode morphological operation on each instance mask before merging.",
+    ),
+    erosion_iteration: int = typer.Option(
+        1, help="Number of erode operations to execute. Ignored if erosion is disabled."
+    ),
+    erosion_size: int = typer.Option(
+        3,
+        help="Size of the square kernel to use during the erosion operation. Ignored if erosion is disabled.",
+    ),
     inference_confidence: float = typer.Option(
         yolo.DEFAULT_CONFIDENCE,
         help="The confidence threshold as a ratio between 0.0. and 1.0.",
