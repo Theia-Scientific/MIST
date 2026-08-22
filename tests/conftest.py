@@ -83,7 +83,7 @@ def model(
                 max_det=parameters.get("maximum_detections", 1000),
                 retina_masks=parameters.get("retina_masks", True),
                 verbose=parameters.get("verbose", False),
-            )
+            )[0]
         )
 
     return predict, class_names

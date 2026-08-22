@@ -106,7 +106,6 @@ def run(
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")
-    logger.debug(f"class_names={class_names}")
     all_class_names = [class_names[i] for i in class_indices]
     instance_class_names = [class_names[i.class_index] for i in instances]
     return Result(
