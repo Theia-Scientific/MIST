@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import supervision as sv
 
-from mist.merging import Mask
-from mist.models import Inference, Result
+from mist.models import Inference
 from pathlib import Path
-from typing import Union, List
+from typing import Any, Dict, Union, List
 from ultralytics.models import YOLO
 
 DEFAULT_CONFIDENCE: float = 0.35
@@ -40,37 +40,18 @@ class Model(Inference):
     def names(self) -> List[str]:
         return [name for _, name in sorted(self.model.names.items())]
 
-    def __call__(
-        self,
-        image: np.ndarray,
-        offset_x: int,
-        offset_y: int,
-        tile_height: int,
-        tile_width: int,
-    ) -> Result:
-        results = self.model(
-            image,
-            agnostic_nms=False,
-            device=self.device,
-            classes=None,
-            conf=self.confidence,
-            half=False,
-            imgsz=self.image_size,
-            iou=self.iou,
-            max_det=self.max_detections,
-            retina_masks=True,
-            verbose=not self.silent,
-        )
-        pred = results[0]
-        tile_class_indices = pred.boxes.cls.cpu().int().tolist()
-        if pred.masks is None:
-            masks_data = np.zeros((len(tile_class_indices), tile_height, tile_width))
-        else:
-            masks_data = pred.masks.data.cpu().numpy().astype(np.uint8)
-        return Result(
-            class_indices=tile_class_indices,
-            masks=[
-                Mask(data=data, offset_x=offset_x, offset_y=offset_y)
-                for data in masks_data
-            ],
+    def __call__(self, image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+        return sv.Detections.from_ultralytics(
+            self.model(
+                image,
+                agnostic_nms=parameters.get("agnostic_nms", False),
+                device=parameters.get("device", "cuda:0"),
+                classes=parameters.get("classes", None),
+                conf=parameters.get("confidence", 0.35),
+                imgsz=parameters.get("image_size", 640),
+                iou=parameters.get("iou", 0.7),
+                max_det=parameters.get("maximum_detections", 1000),
+                retina_masks=parameters.get("retina_masks", True),
+                verbose=parameters.get("verbose", False),
+            )
         )
