@@ -31,3 +31,11 @@ def test_run_with_dump_masks(bus_jpg, model, tmp_path):
     assert len(result.class_names) > 0
     assert len(result.instances) > 0
     assert len(os.listdir(tmp_path)) > 0
+
+
+def test_empty_detections(blank_png, empty_detections):
+    predict, class_names = empty_detections
+    result = run(blank_png, predict, class_names)
+
+    assert len(result.class_names) == 1
+    assert len(result.instances) == 0

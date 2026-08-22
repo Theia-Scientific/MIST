@@ -87,3 +87,16 @@ def model(
         )
 
     return predict, class_names
+
+
+@pytest.fixture(scope="session")
+def empty_detections() -> (
+    Tuple[Callable[[np.ndarray, Dict[str, Any]], sv.Detections], List[str]]
+):
+    def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+        _ = image
+        _ = parameters
+
+        return sv.Detections(xyxy=np.array([[0, 0, 100, 100]]))
+
+    return predict, ["object"]
