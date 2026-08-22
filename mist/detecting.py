@@ -4,7 +4,7 @@ import logging
 import numpy as np
 
 from collections import Counter
-from mist import merging, tiling
+from mist import erosion, merging, tiling
 from mist.models import Inference
 from mist.instances import Instance
 from mist.utils import read_image_file
@@ -45,7 +45,7 @@ def run(
     model: Inference,
     dump_masks: bool = DEFAULT_DUMP_MASKS,
     dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
-    erosion: merging.Erosion = merging.Erosion(),
+    erosion: erosion.Configuration = erosion.Configuration(),
     merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
