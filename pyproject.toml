@@ -28,6 +28,7 @@ dependencies = [
     "natsort",
     "opencv-python",
     "pydantic",
+    "supervision",
     "tifffile",
 ]
 
