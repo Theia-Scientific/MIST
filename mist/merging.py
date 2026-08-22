@@ -7,7 +7,7 @@ import os
 import torch
 
 from pathlib import Path
-from mist.erosion import Erosion
+from mist import erosion
 from mist.instances import Instance
 from pydantic import BaseModel, ConfigDict
 from typing import List, Tuple
@@ -28,7 +28,7 @@ def run(
     masks: List[Mask],
     src_image_size: Tuple[int, int],
     tile_size: Tuple[int, int],
-    erosion: Erosion = Erosion(),
+    erosion: erosion.Configuration = erosion.Configuration(),
     dump_masks: bool = False,
     dump_masks_to: Path = Path("tmp"),
     merge_classes: List[int] = [],
