@@ -83,7 +83,8 @@ def main(
         help="The images to run tiled inference with the weights file."
     ),
     device: str = typer.Option(
-        "cuda:0", help="The device to use for inference. Use 'mps' for Apple Silicon."
+        "cuda:0",
+        help="The device to use for inference. Use 'mps' for Apple" "Silicon.",
     ),
     dump_masks: bool = typer.Option(
         detecting.DEFAULT_DUMP_MASKS, help="Creates PNGs of masks during merging."
@@ -94,13 +95,14 @@ def main(
     ),
     erosion_enabled: bool = typer.Option(
         erosion.DEFAULT_ENABLED,
-        help="Enable an erode morphological operation on each instance mask before merging.",
+        help=(
+            "Enable an erode morphological operation on each instance mask "
+            "before merging."
+        ),
     ),
     erosion_iteration: int = typer.Option(
         erosion.DEFAULT_ITERATIONS,
-        help=(
-            "Number of erode operations to execute. Ignored if erosion is " "disabled."
-        ),
+        help="Number of erode operations to execute. Ignored if erosion is disabled.",
     ),
     erosion_size: int = typer.Option(
         erosion.DEFAULT_SIZE,
@@ -134,15 +136,24 @@ def main(
     ),
     overlap_height: float = typer.Option(
         detecting.DEFAULT_OVERLAP_HEIGHT,
-        help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
+        help=(
+            "The amount of overlap in the Y direction as a ratio between 0.0 "
+            "and 1.0."
+        ),
     ),
     overlap_width: float = typer.Option(
         detecting.DEFAULT_OVERLAP_WIDTH,
-        help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
+        help=(
+            "The amount of overlap in the X direction as a ratio between 0.0 "
+            "and 1.0."
+        ),
     ),
     random_object_colors: bool = typer.Option(
         False,
-        help="Use random colors for each instance; otherwise, select random color for each class.",
+        help=(
+            "Use random colors for each instance; otherwise, select random "
+            "color for each class."
+        ),
     ),
     show: bool = typer.Option(True, help="Show visualization"),
     show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
