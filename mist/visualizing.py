@@ -8,7 +8,7 @@ import random
 
 from mist.instances import Instance
 from pydantic import BaseModel
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -26,23 +26,23 @@ def run(
     instances: List[Instance],
     img: np.ndarray,
     class_names: List[str],
-    tiles: Optional[List[Tile]] = None,
-    segment: bool = True,
-    show_boxes: bool = False,
-    show_class: bool = False,
-    fill_mask: bool = True,
     alpha: float = 0.3,
     color_class_background: Tuple[int, int, int] = (0, 0, 255),
     color_class_text: Tuple[int, int, int] = (255, 255, 255),
-    thickness: int = 4,
-    font=cv2.FONT_HERSHEY_SIMPLEX,
-    font_scale: float = 1.5,
     delta_colors: int = 3,
     dpi: int = 150,
-    random_object_colors=True,
-    show_classes_list=[],
-    list_of_class_colors=None,
-    logger: logging.Logger = LOGGER
+    fill_mask: bool = True,
+    font: int = cv2.FONT_HERSHEY_SIMPLEX,
+    font_scale: float = 1.5,
+    list_of_class_colors: Optional[Any] = None,
+    logger: logging.Logger = LOGGER,
+    random_object_colors: bool = True,
+    segment: bool = True,
+    show_boxes: bool = False,
+    show_class: bool = False,
+    show_classes_list: List = [],
+    thickness: int = 4,
+    tiles: Optional[List[Tile]] = None,
 ) -> np.ndarray:
     logger.debug(f"{instances=}")
     logger.debug(f"{img=}")
