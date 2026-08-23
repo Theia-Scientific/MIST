@@ -31,8 +31,8 @@ def run(
     erosion: erosion.Configuration = erosion.Configuration(),
     dump_masks: bool = False,
     dump_masks_to: Path = Path("tmp"),
-    merge_classes: List[int] = [],
     logger: logging.Logger = LOGGER,
+    merge_classes: List[int] = [],
 ) -> List[Instance]:
     logger.debug(f"{class_indices=}")
     logger.debug(f"{masks=}")
