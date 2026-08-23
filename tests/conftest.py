@@ -3,8 +3,10 @@
 import cv2
 import numpy as np
 import pytest
+import supervision as sv
 
-from mist.models import Inference, yolo
+from typing import Any, Callable, Dict, List, Tuple
+from ultralytics.models import YOLO
 from ultralytics.utils.downloads import attempt_download_asset, download
 
 
@@ -62,5 +64,39 @@ def blank_tif(blank_image, tmp_path):
 
 
 @pytest.fixture(scope="session")
-def model(weights_file) -> Inference:
-    return yolo.Model(weights_file, device="cpu")
+def model(
+    weights_file,
+) -> Tuple[Callable[[np.ndarray, Dict[str, Any]], sv.Detections], List[str]]:
+    model = YOLO(weights_file)
+    class_names = [name for _, name in sorted(model.names.items())]
+
+    def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+        return sv.Detections.from_ultralytics(
+            model(
+                image,
+                agnostic_nms=parameters.get("agnostic_nms", False),
+                device=parameters.get("device", "cpu"),
+                classes=parameters.get("classes", None),
+                conf=parameters.get("confidence", 0.35),
+                imgsz=parameters.get("image_size", 640),
+                iou=parameters.get("iou", 0.7),
+                max_det=parameters.get("maximum_detections", 1000),
+                retina_masks=parameters.get("retina_masks", True),
+                verbose=parameters.get("verbose", False),
+            )[0]
+        )
+
+    return predict, class_names
+
+
+@pytest.fixture(scope="session")
+def empty_detections() -> (
+    Tuple[Callable[[np.ndarray, Dict[str, Any]], sv.Detections], List[str]]
+):
+    def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+        _ = image
+        _ = parameters
+
+        return sv.Detections(xyxy=np.array([[0, 0, 100, 100]]))
+
+    return predict, ["object"]
