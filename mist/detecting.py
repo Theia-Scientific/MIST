@@ -47,13 +47,13 @@ def run(
     dump_masks: bool = DEFAULT_DUMP_MASKS,
     dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
     erosion: erosion.Configuration = erosion.Configuration(),
+    logger: logging.Logger = LOGGER,
     merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
+    parameters: Dict[str, Any] = {},
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
-    logger: logging.Logger = LOGGER,
-    parameters: Dict[str, Any] = {},
 ) -> Result:
     logger.info("Reading image file...")
     original_img = read_image_file(src)
