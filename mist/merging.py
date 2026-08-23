@@ -61,9 +61,9 @@ def run(
                 os.makedirs(dump_masks_to.joinpath(str(cls_index_int)), exist_ok=True)
             cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
             class_masks = [masks[i] for i in cls_indexes]
-            logger.debug(f"class masks count = {len(class_masks)}")
+            logger.debug(f"{len(class_masks)=}")
             class_mask = np.zeros((src_image_height, src_image_width))
-            logger.debug(f"class_mask.shape = {class_mask.shape}")
+            logger.debug(f"{class_mask.shape=}")
             for i, mask in enumerate(class_masks):
                 class_mask[
                     mask.offset_y : mask.offset_y + tile_height,
@@ -89,7 +89,7 @@ def run(
             contours, _ = cv2.findContours(
                 class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
             )
-            logger.debug(f"contours count={len(contours)}")
+            logger.debug(f"{len(contours)=}")
             for contour in contours:
                 x, y, w, h = cv2.boundingRect(contour)
                 instance_mask = np.zeros(
