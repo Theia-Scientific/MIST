@@ -7,7 +7,8 @@ from mist import detecting, visualizing
 
 @pytest.fixture(scope="module")
 def bus_result(bus_jpg, model):
-    return detecting.run(bus_jpg, model)
+    predict, class_names = model
+    return detecting.run(bus_jpg, predict, class_names)
 
 
 @pytest.fixture

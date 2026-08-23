@@ -3,17 +3,19 @@
 import importlib.metadata
 import json
 import logging
+import numpy as np
 import os
+import supervision as sv
 import tempfile
 import typer
 import zipfile
 
 from mist import __app_name__, detecting, erosion, utils, visualizing
-from mist.models import yolo
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
+from ultralytics.models import YOLO
 
 logging.getLogger("matplotlib.font_manager").disabled = True
 
@@ -112,21 +114,21 @@ def main(
         ),
     ),
     inference_confidence: float = typer.Option(
-        yolo.DEFAULT_CONFIDENCE,
+        0.35,
         help="The confidence threshold as a ratio between 0.0. and 1.0.",
     ),
     inference_iou: float = typer.Option(
-        yolo.DEFAULT_IOU, help="The Intersection-over-Union for inference."
+        0.7, help="The Intersection-over-Union for inference."
     ),
     inference_image_size: int = typer.Option(
-        yolo.DEFAULT_IMAGE_SIZE, help="The size of the image for the YOLO model."
+        640, help="The size of the image for the YOLO model."
     ),
     inference_max_detections: int = typer.Option(
-        yolo.DEFAULT_MAX_DETECTIONS,
+        1000,
         help="The maximum number of detections for inference.",
     ),
     inference_silent: bool = typer.Option(
-        yolo.DEFAULT_SILENT, help="Silence the output for inference."
+        False, help="Silence the output for inference."
     ),
     merge_classes: List[int] = typer.Option(
         detecting.DEFAULT_MERGE_CLASSES,
@@ -186,21 +188,31 @@ def main(
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"{version=}")
-    model = yolo.Model(
-        weights_file,
-        inference_confidence,
-        device,
-        inference_image_size,
-        inference_iou,
-        inference_max_detections,
-        inference_silent,
-    )
+    model = YOLO(weights_file)
+
+    def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+        return sv.Detections.from_ultralytics(
+            model(
+                image,
+                agnostic_nms=parameters.get("agnostic_nms", False),
+                device=parameters.get("device", "cuda:0"),
+                classes=parameters.get("classes", None),
+                conf=parameters.get("confidence", 0.35),
+                imgsz=parameters.get("image_size", 640),
+                iou=parameters.get("iou", 0.7),
+                max_det=parameters.get("maximum_detections", 1000),
+                retina_masks=parameters.get("retina_masks", True),
+                verbose=parameters.get("verbose", False),
+            )[0]
+        )
+
     results = []
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
         result = detecting.run(
             src,
-            model,
+            predict,
+            class_names=[name for _, name in sorted(model.names.items())],
             erosion=erosion.Configuration(
                 enabled=erosion_enabled, iterations=erosion_iteration, size=erosion_size
             ),
@@ -212,6 +224,14 @@ def main(
             tile_height=tile_height,
             tile_width=tile_width,
             logger=LOGGER,
+            parameters={
+                "confidence": inference_confidence,
+                "device": device,
+                "image_size": inference_image_size,
+                "iou": inference_iou,
+                "maximum_detections": inference_max_detections,
+                "verbose": not inference_silent,
+            },
         )
         LOGGER.info("Detecting...DONE")
         if show:

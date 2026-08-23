@@ -2,16 +2,16 @@
 
 import logging
 import numpy as np
+import supervision as sv
 
 from collections import Counter
 from mist import erosion, merging, tiling
-from mist.models import Inference
 from mist.instances import Instance
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
-from typing import List
+from typing import Callable, Any, Dict, List
 
 DEFAULT_DUMP_MASKS: bool = False
 DEFAULT_DUMP_MASKS_TO: Path = Path("tmp")
@@ -42,7 +42,8 @@ class Result(BaseModel):
 
 def run(
     src: Path,
-    model: Inference,
+    model: Callable[[np.ndarray, Dict[str, Any]], sv.Detections],
+    class_names: List[str],
     dump_masks: bool = DEFAULT_DUMP_MASKS,
     dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
     erosion: erosion.Configuration = erosion.Configuration(),
@@ -52,6 +53,7 @@ def run(
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
     logger: logging.Logger = LOGGER,
+    parameters: Dict[str, Any] = {},
 ) -> Result:
     logger.info("Reading image file...")
     original_img = read_image_file(src)
@@ -70,9 +72,21 @@ def run(
     visual_tiles = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
-        result = model(tile.img, tile.x_start, tile.y_start, tile_height, tile_width)
-        masks.extend(result.masks)
-        class_indices.extend(result.class_indices)
+        detections = model(tile.img, parameters)
+        if detections.class_id is None:
+            class_indices.extend([0 for _ in range(len(detections))])
+        else:
+            class_indices.extend(detections.class_id.tolist())
+        if detections.mask is None:
+            masks_data = np.zeros((len(detections), tile_height, tile_width))
+        else:
+            masks_data = detections.mask
+        masks.extend(
+            [
+                merging.Mask(data=data, offset_x=tile.x_start, offset_y=tile.y_start)
+                for data in masks_data
+            ]
+        )
         logger.info(f"Running inference on {index} tile...DONE")
         visual_tiles.append(
             VisualTile(
@@ -94,8 +108,6 @@ def run(
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")
-    class_names = model.names
-    logger.debug(f"class_names={class_names}")
     all_class_names = [class_names[i] for i in class_indices]
     instance_class_names = [class_names[i.class_index] for i in instances]
     return Result(
