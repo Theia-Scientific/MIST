@@ -55,11 +55,25 @@ def run(
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
 ) -> Result:
+    logger.debug(f"{src=}")
+    logger.debug(f"{class_names=}")
+    logger.debug(f"{dump_masks=}")
+    logger.debug(f"{dump_masks_to=}")
+    logger.debug(f"{erosion=}")
+    logger.debug(f"{merge_classes=}")
+    logger.debug(f"{overlap_height=}")
+    logger.debug(f"{overlap_width=}")
+    logger.debug(f"{parameters=}")
+    logger.debug(f"{tile_height=}")
+    logger.debug(f"{tile_width=}")
     logger.info("Reading image file...")
     original_img = read_image_file(src)
     logger.info("Reading image file...DONE")
     orig_height, orig_width, *_ = original_img.shape
+    logger.debug(f"{orig_height=}")
+    logger.debug(f"{orig_width=}")
     orig_size = (orig_width, orig_height)
+    logger.debug(f"{orig_size=}")
     logger.info("Creating tiles...")
     tiles = tiling.run(
         original_img,
@@ -109,7 +123,9 @@ def run(
     )
     logger.info("Merging results...DONE")
     all_class_names = [class_names[i] for i in class_indices]
+    logger.debug(f"{all_class_names=}")
     instance_class_names = [class_names[i.class_index] for i in instances]
+    logger.debug(f"{instance_class_names=}")
     return Result(
         class_names=class_names,
         instances=instances,
