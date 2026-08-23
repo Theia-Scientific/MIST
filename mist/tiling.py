@@ -20,9 +20,9 @@ class Tile(BaseModel):
 
 def run(
     src_img: np.ndarray,
+    logger: logging.Logger = LOGGER,
     tile_size: Tuple[int, int] = (640, 640),
     overlap: Tuple[float, float] = (0.2, 0.2),
-    logger: logging.Logger = LOGGER
 ) -> List[Tile]:
     logger.debug(f"{src_img=}")
     logger.debug(f"{tile_size=}")
