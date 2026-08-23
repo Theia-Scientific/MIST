@@ -8,7 +8,7 @@ import random
 
 from mist.instances import Instance
 from pydantic import BaseModel
-from typing import Any, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def run(
     fill_mask: bool = True,
     font: int = cv2.FONT_HERSHEY_SIMPLEX,
     font_scale: float = 1.5,
-    list_of_class_colors: Optional[Any] = None,
+    list_of_class_colors: Optional[List[Tuple[int, int, int]]] = None,
     logger: logging.Logger = LOGGER,
     random_object_colors: bool = True,
     segment: bool = True,
@@ -44,25 +44,25 @@ def run(
     thickness: int = 4,
     tiles: Optional[List[Tile]] = None,
 ) -> np.ndarray:
-    logger.debug(f"{instances=}")
-    logger.debug(f"{img=}")
+    logger.debug(f"{alpha=}")
     logger.debug(f"{class_names=}")
-    logger.debug(f"{tiles=}")
+    logger.debug(f"{color_class_background=}")
+    logger.debug(f"{color_class_text=}")
+    logger.debug(f"{delta_colors=}")
+    logger.debug(f"{dpi=}")
+    logger.debug(f"{fill_mask=}")
+    logger.debug(f"{font=}")
+    logger.debug(f"{font_scale=}")
+    logger.debug(f"{img=}")
+    logger.debug(f"{instances=}")
+    logger.debug(f"{list_of_class_colors=}")
+    logger.debug(f"{random_object_colors=}")
     logger.debug(f"{segment=}")
     logger.debug(f"{show_boxes=}")
     logger.debug(f"{show_class=}")
-    logger.debug(f"{fill_mask=}")
-    logger.debug(f"{alpha=}")
-    logger.debug(f"{color_class_background=}")
-    logger.debug(f"{color_class_text=}")
-    logger.debug(f"{thickness=}")
-    logger.debug(f"{font=}")
-    logger.debug(f"{font_scale=}")
-    logger.debug(f"{delta_colors=}")
-    logger.debug(f"{dpi=}")
-    logger.debug(f"{random_object_colors=}")
     logger.debug(f"{show_classes_list=}")
-    logger.debug(f"{list_of_class_colors=}")
+    logger.debug(f"{thickness=}")
+    logger.debug(f"{tiles=}")
     labeled_image = img.copy()
     if random_object_colors:
         random.seed(int(delta_colors))
@@ -71,6 +71,7 @@ def run(
             class_name = str(class_names[instance.class_index])
         else:
             class_name = str(instance.class_index)
+        logger.debug(f"{class_name=}")
         if show_classes_list and int(instance.class_index) not in show_classes_list:
             continue
         if random_object_colors:
@@ -88,6 +89,7 @@ def run(
             )
         else:
             color = list_of_class_colors[instance.class_index]
+        logger.debug(f"{color=}")
         box = instance.box
         x_min, y_min, x_max, y_max = box
         logger.debug(f"{x_min=}")
