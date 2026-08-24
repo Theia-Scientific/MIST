@@ -13,8 +13,6 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from typing import Callable, Any, Dict, List
 
-DEFAULT_DUMP_MASKS: bool = False
-DEFAULT_DUMP_MASKS_TO: Path = Path("tmp")
 DEFAULT_MERGE_CLASSES: List[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
 DEFAULT_OVERLAP_WIDTH: float = 0.2
@@ -44,8 +42,7 @@ def run(
     src: Path,
     model: Callable[[np.ndarray, Dict[str, Any]], sv.Detections],
     class_names: List[str],
-    dump_masks: bool = DEFAULT_DUMP_MASKS,
-    dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
+    dump_masks: merging.DumpMaskConfiguration = merging.DumpMaskConfiguration(),
     erosion: erosion.Configuration = erosion.Configuration(),
     logger: logging.Logger = LOGGER,
     merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
@@ -58,7 +55,6 @@ def run(
     logger.debug(f"{src=}")
     logger.debug(f"{class_names=}")
     logger.debug(f"{dump_masks=}")
-    logger.debug(f"{dump_masks_to=}")
     logger.debug(f"{erosion=}")
     logger.debug(f"{merge_classes=}")
     logger.debug(f"{overlap_height=}")
@@ -118,7 +114,6 @@ def run(
         (tile_width, tile_height),
         erosion=erosion,
         dump_masks=dump_masks,
-        dump_masks_to=dump_masks_to,
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")

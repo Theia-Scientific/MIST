@@ -10,7 +10,7 @@ import tempfile
 import typer
 import zipfile
 
-from mist import __app_name__, detecting, erosion, utils, visualizing
+from mist import __app_name__, detecting, erosion, merging, utils, visualizing
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
@@ -88,11 +88,20 @@ def main(
         "cuda:0",
         help="The device to use for inference. Use 'mps' for Apple" "Silicon.",
     ),
-    dump_masks: bool = typer.Option(
-        detecting.DEFAULT_DUMP_MASKS, help="Creates PNGs of masks during merging."
+    dump_class_masks: bool = typer.Option(
+        False, help="Creates PNGs of class masks during merging."
+    ),
+    dump_data_masks: bool = typer.Option(
+        False, help="Creates PNGs of data masks during merging."
+    ),
+    dump_erosion_masks: bool = typer.Option(
+        False, help="Creates PNGs of erosion masks during merging."
+    ),
+    dump_instance_masks: bool = typer.Option(
+        False, help="Creates PNGs of instance masks during merging."
     ),
     dump_masks_to: Path = typer.Option(
-        detecting.DEFAULT_DUMP_MASKS_TO,
+        Path("tmp"),
         help="Location to create PNGs of masks during merging.",
     ),
     erosion_enabled: bool = typer.Option(
@@ -214,13 +223,18 @@ def main(
             src,
             predict,
             class_names=[name for _, name in sorted(model.names.items())],
+            dump_masks=merging.DumpMaskConfiguration(
+                clazz=dump_class_masks,
+                data=dump_data_masks,
+                erode=dump_erosion_masks,
+                instance=dump_instance_masks,
+                to=dump_masks_to,
+            ),
             erosion=erosion.Configuration(
                 enabled=erosion_enabled,
                 iterations=erosion_iterations,
                 size=erosion_size,
             ),
-            dump_masks=dump_masks,
-            dump_masks_to=dump_masks_to,
             merge_classes=merge_classes,
             overlap_height=overlap_height,
             overlap_width=overlap_width,
