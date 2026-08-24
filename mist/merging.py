@@ -29,7 +29,7 @@ class DumpMaskConfiguration(BaseModel):
     def write(
         self, img: np.ndarray, class_index: int, instance_index: int, suffix: str
     ) -> bool:
-        return cv2.imwrite(
+        return not cv2.imwrite(
             str(
                 self.to.joinpath(str(class_index)).joinpath(
                     f"{instance_index}{suffix}.png"
