@@ -72,8 +72,10 @@ def run(
                     mask.data
                     if erosion_kernel is None
                     else cv2.erode(
-                        mask.data, erosion_kernel, iterations=erosion.iterations
-                    )
+                        mask.data.astype(np.uint8),
+                        erosion_kernel,
+                        iterations=erosion.iterations,
+                    ).astype(bool)
                 )
                 if dump_masks:
                     dst = dump_masks_to.joinpath(str(cls_index_int))
