@@ -103,7 +103,7 @@ def main(
             "before merging."
         ),
     ),
-    erosion_iteration: int = typer.Option(
+    erosion_iterations: int = typer.Option(
         erosion.DEFAULT_ITERATIONS,
         help="Number of erode operations to execute. Ignored if erosion is disabled.",
     ),
@@ -215,7 +215,9 @@ def main(
             predict,
             class_names=[name for _, name in sorted(model.names.items())],
             erosion=erosion.Configuration(
-                enabled=erosion_enabled, iterations=erosion_iteration, size=erosion_size
+                enabled=erosion_enabled,
+                iterations=erosion_iterations,
+                size=erosion_size,
             ),
             dump_masks=dump_masks,
             dump_masks_to=dump_masks_to,
