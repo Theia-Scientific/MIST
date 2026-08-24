@@ -97,6 +97,7 @@ def main(
     ),
     erosion_enabled: bool = typer.Option(
         erosion.DEFAULT_ENABLED,
+        "--erosion/--no-erosion",
         help=(
             "Enable an erode morphological operation on each instance mask "
             "before merging."
