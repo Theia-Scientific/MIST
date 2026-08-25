@@ -89,19 +89,20 @@ def main(
         help="The device to use for inference. Use 'mps' for Apple" "Silicon.",
     ),
     dump_class_masks: bool = typer.Option(
-        False, help="Creates PNGs of class masks during merging."
+        dump.DEFAULT_MASK_CLASS, help="Creates PNGs of class masks during merging."
     ),
     dump_data_masks: bool = typer.Option(
-        False, help="Creates PNGs of data masks during merging."
+        dump.DEFAULT_MASK_DATA, help="Creates PNGs of data masks during merging."
     ),
     dump_erosion_masks: bool = typer.Option(
-        False, help="Creates PNGs of erosion masks during merging."
+        dump.DEFAULT_MASK_ERODE, help="Creates PNGs of erosion masks during merging."
     ),
     dump_instance_masks: bool = typer.Option(
-        False, help="Creates PNGs of instance masks during merging."
+        dump.DEFAULT_MASK_INSTANCE,
+        help="Creates PNGs of instance masks during merging.",
     ),
     dump_masks_to: Path = typer.Option(
-        Path("tmp"),
+        dump.DEFAULT_MASK_TO,
         help="Location to create PNGs of masks during merging.",
     ),
     erosion_enabled: bool = typer.Option(
