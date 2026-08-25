@@ -10,6 +10,8 @@ from mist.instances import Instance
 from pydantic import BaseModel
 from typing import List, Optional, Tuple
 
+logging.getLogger("matplotlib.font_manager").disabled = True
+
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
