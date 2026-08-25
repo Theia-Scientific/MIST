@@ -7,7 +7,7 @@ Merging Instance Segmentation Tiler (MIST) with Machine Learning (ML) computer
 vision models. MIST creates tiles from a large image, runs inference on each
 tile, and combines, or merges, instances of the same class together using the
 instance segmentation results from inference. Non-maximum suppression (NMS) is
-_not_ used to determine overlop. Instead, each instance of a class is logically
+_not_ used to determine overlap. Instead, each instance of a class is logically
 "anded" into a binary mask. The individual instances within a class are
 identified as contours through OpenCV's connectivity algorithm. In this manner,
 large instances that span multiple tiles are combined, or merged, into a single
@@ -17,12 +17,12 @@ are automatically filtered and reduced to a single instance. Only a single
 
 MIST is inspired by the [Slicing Aided Hyper Inference] (SAHI), [YOLO
 Patch-Based Inference] (YPBI), and [dask_relabeling] packages. The SAHI tiler
-only does bounding boxes, does not merge large instances spanning multiple
-tiles, and uses NMS for instance reduction in overlap regions. The YPBI tiler
-does instance segmentations but does not merge large instances, and it performs
-multiple NMS iterations for both bounding boxes and segmentations. The
-`dask_relabeling` package does instance segmentations and merging large
-instances, but it does not work with YOLO models and GPU-powered inference.
+does not merge large instances spanning multiple tiles and uses NMS for
+instance reduction in overlap regions. The YPBI tiler does instance
+segmentations but does not merge large instances, and it performs multiple NMS
+iterations for both bounding boxes and segmentations. The `dask_relabeling`
+package does instance segmentations and merging large instances, but it does not
+work with YOLO models and GPU-powered inference.
 
 1. [Prerequisites](#prerequisites)
    1. [Python](#prerequisites-python)
@@ -77,19 +77,19 @@ similar but different for other Linux distributions.
 2. Obtain the latest packages from the PPA.
 
    ```sh
-   sudo update
+   sudo apt update
    ```
    
 3. Install Python v3.11 or newer.
 
    ```sh
-   sudo apt install python3.11
+   sudo apt install -y python3.11
    ```
    
 4. Install the `venv` package.
 
    ```sh
-   sudo apt install python3.11-venv
+   sudo apt install -y python3.11-venv
    ```
    
 #### macOS
@@ -345,13 +345,41 @@ mist --device=mps yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
 Using an Ultralytics YOLO segmentation model and defaults.
 
 ```python
-from mist import detecting
-from mist.models import yolo
-from pathlib import Path
+import supervision as sv
 
-results = detecting.run(
-    Path("/path/to/image.jpg"), 
-    yolo.Model(Path("/path/to/weights/yolov8n-seg.pt"))
+from mist import detecting
+from pathlib import Path
+from ultralytics.models import YOLO
+
+model = YOLO(weights_file)
+
+def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+    return sv.Detections.from_ultralytics(
+        model(
+            image,
+            agnostic_nms=parameters.get("agnostic_nms", False),
+            device=parameters.get("device", "cuda:0"),
+            classes=parameters.get("classes", None),
+            conf=parameters.get("confidence", 0.35),
+            imgsz=parameters.get("image_size", 640),
+            iou=parameters.get("iou", 0.7),
+            max_det=parameters.get("maximum_detections", 1000),
+            retina_masks=parameters.get("retina_masks", True),
+            verbose=parameters.get("verbose", False),
+        )[0]
+    )
+
+result = detecting.run(
+    Path("/path/to/image.jpg"),
+    predict,
+    class_names=[name for _, name in sorted(model.names.items())],
+    parameters={
+        "confidence": inference_confidence,
+        "device": device,
+        "image_size": inference_image_size,
+        "iou": inference_iou,
+        "maximum_detections": inference_max_detections,
+    },
 )
 print(results)
 ```
@@ -362,38 +390,17 @@ Using a custom model.
 import numpy as np
 
 from mist import detecting
-from mist.models import Inference, Result
 from pathlib import Path
 
-# Start by defining the model. A class must inherit the `Inferece` class and 
-# implement the `names` property and the `__call__` method, i.e., the class 
-# must be "callable" and return a `Result`.
-class CustomModel(Inference):
-    def __init__(
-        self,
-    ):
-        pass
+model = CustomModel(weights_file)
 
-    @property
-    def names(self) -> List[str]:
-        return ["object"]
-        
-    def __call__(
-        self,
-        image: np.ndarray,
-        offset_x: int,
-        offset_y: int,
-        tile_height: int,
-        tile_width: int,
-    ) -> Result:
-        return Result(
-            class_indices=[],
-            masks=[],
-        )
-        
+def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+    return sv.Detections.from_inference(model(image))
+
 results = detecting.run(
     Path("/path/to/image.jpg"), 
-    CustomModel()
+    predict,
+    class_names=["object"]
 )
 print(results)
 ```
@@ -434,7 +441,7 @@ print(results)
    dependencies.
 
    ```sh
-   python3 -m pip install -e ".[cli,dev]"
+   pip install -e ".[cli,dev]"
    ```
 
 5. Create a local branch.
