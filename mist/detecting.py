@@ -5,7 +5,7 @@ import numpy as np
 import supervision as sv
 
 from collections import Counter
-from mist import erosion, merging, tiling
+from mist import dump, erosion, merging, tiling
 from mist.instances import Instance
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
@@ -42,7 +42,7 @@ def run(
     src: Path,
     model: Callable[[np.ndarray, Dict[str, Any]], sv.Detections],
     class_names: List[str],
-    dump_masks: merging.DumpMaskConfiguration = merging.DumpMaskConfiguration(),
+    dump_masks: dump.MaskConfiguration = dump.MaskConfiguration(),
     erosion: erosion.Configuration = erosion.Configuration(),
     logger: logging.Logger = LOGGER,
     merge_classes: List[int] = DEFAULT_MERGE_CLASSES,

@@ -3,8 +3,8 @@
 import os
 
 from mist.detecting import run
+from mist.dump import MaskConfiguration
 from mist.erosion import Configuration as ErosionConfiguration
-from mist.merging import DumpMaskConfiguration
 
 
 def test_run(bus_jpg, model):
@@ -39,7 +39,7 @@ def test_run_with_dump_masks(bus_jpg, model, tmp_path):
         bus_jpg,
         predict,
         class_names,
-        dump_masks=DumpMaskConfiguration(
+        dump_masks=MaskConfiguration(
             clazz=True, data=True, erode=True, instance=True, to=tmp_path
         ),
     )

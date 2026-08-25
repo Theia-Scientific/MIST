@@ -10,7 +10,7 @@ import tempfile
 import typer
 import zipfile
 
-from mist import __app_name__, detecting, erosion, merging, utils, visualizing
+from mist import __app_name__, detecting, dump, erosion, utils, visualizing
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
@@ -223,7 +223,7 @@ def main(
             src,
             predict,
             class_names=[name for _, name in sorted(model.names.items())],
-            dump_masks=merging.DumpMaskConfiguration(
+            dump_masks=dump.MaskConfiguration(
                 clazz=dump_class_masks,
                 data=dump_data_masks,
                 erode=dump_erosion_masks,

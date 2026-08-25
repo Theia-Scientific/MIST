@@ -6,75 +6,12 @@ import numpy as np
 import os
 import torch
 
-from pathlib import Path
-from mist import erosion
+from mist import dump, erosion
 from mist.instances import Instance
 from pydantic import BaseModel, ConfigDict
 from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
-
-DEFAULT_DUMP_MASK_CLASS: bool = False
-DEFAULT_DUMP_MASK_DATA: bool = False
-DEFAULT_DUMP_MASK_ERODE: bool = False
-DEFAULT_DUMP_MASK_INSTANCE: bool = False
-DEFAULT_DUMP_MASK_TO: Path = Path("tmp")
-
-
-class DumpMaskConfiguration(BaseModel):
-    clazz: bool = DEFAULT_DUMP_MASK_CLASS
-    data: bool = DEFAULT_DUMP_MASK_DATA
-    erode: bool = DEFAULT_DUMP_MASK_ERODE
-    instance: bool = DEFAULT_DUMP_MASK_INSTANCE
-    to: Path = Path("tmp")
-
-    @property
-    def enabled(self) -> bool:
-        return self.clazz or self.data or self.erode or self.instance
-
-    def write(
-        self, img: np.ndarray, class_index: int, instance_index: int, suffix: str
-    ) -> bool:
-        return not cv2.imwrite(
-            str(
-                self.to.joinpath(str(class_index)).joinpath(
-                    f"{instance_index}{suffix}.png"
-                )
-            ),
-            img * 255,
-        )
-
-    def write_class(
-        self, img: np.ndarray, class_index: int, instance_index: int
-    ) -> bool:
-        if self.clazz:
-            return self.write(img, class_index, instance_index, "c")
-        else:
-            return False
-
-    def write_data(
-        self, img: np.ndarray, class_index: int, instance_index: int
-    ) -> bool:
-        if self.data:
-            return self.write(img, class_index, instance_index, "m")
-        else:
-            return False
-
-    def write_erode(
-        self, img: np.ndarray, class_index: int, instance_index: int
-    ) -> bool:
-        if self.erode:
-            return self.write(img, class_index, instance_index, "e")
-        else:
-            return False
-
-    def write_instance(
-        self, img: np.ndarray, class_index: int, instance_index: int
-    ) -> bool:
-        if self.instance:
-            return self.write(img, class_index, instance_index, "i")
-        else:
-            return False
 
 
 class Mask(BaseModel):
@@ -91,7 +28,7 @@ def run(
     src_image_size: Tuple[int, int],
     tile_size: Tuple[int, int],
     erosion: erosion.Configuration = erosion.Configuration(),
-    dump_masks: DumpMaskConfiguration = DumpMaskConfiguration(),
+    dump_masks: dump.MaskConfiguration = dump.MaskConfiguration(),
     logger: logging.Logger = LOGGER,
     merge_classes: List[int] = [],
 ) -> List[Instance]:
