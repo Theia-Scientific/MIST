@@ -14,12 +14,18 @@ from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+DEFAULT_DUMP_MASK_CLASS: bool = False
+DEFAULT_DUMP_MASK_DATA: bool = False
+DEFAULT_DUMP_MASK_ERODE: bool = False
+DEFAULT_DUMP_MASK_INSTANCE: bool = False
+DEFAULT_DUMP_MASK_TO: Path = Path("tmp")
+
 
 class DumpMaskConfiguration(BaseModel):
-    clazz: bool = False
-    data: bool = False
-    erode: bool = False
-    instance: bool = False
+    clazz: bool = DEFAULT_DUMP_MASK_CLASS
+    data: bool = DEFAULT_DUMP_MASK_DATA
+    erode: bool = DEFAULT_DUMP_MASK_ERODE
+    instance: bool = DEFAULT_DUMP_MASK_INSTANCE
     to: Path = Path("tmp")
 
     @property
