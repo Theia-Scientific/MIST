@@ -3,6 +3,7 @@
 import os
 
 from mist.detecting import run
+from mist.erosion import Configuration as ErosionConfiguration
 from mist.merging import DumpMaskConfiguration
 
 
@@ -18,6 +19,18 @@ def test_run_with_no_predictions(blank_png, model):
     result = run(blank_png, predict, class_names)
     assert len(result.class_names) > 0
     assert len(result.instances) == 0
+
+
+def test_run_with_erosion(bus_jpg, model):
+    predict, class_names = model
+    result = run(
+        bus_jpg,
+        predict,
+        class_names,
+        erosion=ErosionConfiguration(enabled=True),
+    )
+    assert len(result.class_names) > 0
+    assert len(result.instances) > 0
 
 
 def test_run_with_dump_masks(bus_jpg, model, tmp_path):
