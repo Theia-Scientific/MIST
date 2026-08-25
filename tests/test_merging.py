@@ -47,6 +47,12 @@ def test_dump_mask_cfg_write_class_fail(blank_image, mock_write, tmp_path):
     )
 
 
+def test_dump_mask_cfg_write_class_disabled(blank_image, tmp_path):
+    assert not DumpMaskConfiguration(clazz=False, to=tmp_path).write_class(
+        blank_image, 0, 0
+    )
+
+
 def test_dump_mask_cfg_write_data(blank_image, tmp_path):
     assert DumpMaskConfiguration(data=True, to=tmp_path).write_data(blank_image, 0, 0)
     assert tmp_path.joinpath("0d.png").exists
@@ -55,6 +61,12 @@ def test_dump_mask_cfg_write_data(blank_image, tmp_path):
 def test_dump_mask_cfg_write_data_fail(blank_image, mock_write, tmp_path):
     _ = mock_write
     assert not DumpMaskConfiguration(data=True, to=tmp_path).write_data(
+        blank_image, 0, 0
+    )
+
+
+def test_dump_mask_cfg_write_data_disabled(blank_image, tmp_path):
+    assert not DumpMaskConfiguration(data=False, to=tmp_path).write_data(
         blank_image, 0, 0
     )
 
@@ -71,6 +83,12 @@ def test_dump_mask_cfg_write_erode_fail(blank_image, mock_write, tmp_path):
     )
 
 
+def test_dump_mask_cfg_write_erode_disabled(blank_image, tmp_path):
+    assert not DumpMaskConfiguration(erode=False, to=tmp_path).write_erode(
+        blank_image, 0, 0
+    )
+
+
 def test_dump_mask_cfg_write_instance(blank_image, tmp_path):
     assert DumpMaskConfiguration(instance=True, to=tmp_path).write_instance(
         blank_image, 0, 0
@@ -81,5 +99,11 @@ def test_dump_mask_cfg_write_instance(blank_image, tmp_path):
 def test_dump_mask_cfg_write_instance_fail(blank_image, mock_write, tmp_path):
     _ = mock_write
     assert not DumpMaskConfiguration(instance=True, to=tmp_path).write_instance(
+        blank_image, 0, 0
+    )
+
+
+def test_dump_mask_cfg_write_instance_disabled(blank_image, tmp_path):
+    assert not DumpMaskConfiguration(instance=False, to=tmp_path).write_instance(
         blank_image, 0, 0
     )
