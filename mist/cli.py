@@ -201,7 +201,7 @@ def main(
 
     def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
         return sv.Detections.from_ultralytics(
-            model(
+            model(  # pyright: ignore
                 image,
                 agnostic_nms=parameters.get("agnostic_nms", False),
                 device=parameters.get("device", "cuda:0"),
