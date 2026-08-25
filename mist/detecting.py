@@ -5,7 +5,7 @@ import numpy as np
 import supervision as sv
 
 from collections import Counter
-from mist import merging, tiling
+from mist import dump, erosion, merging, tiling
 from mist.instances import Instance
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
@@ -13,8 +13,6 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from typing import Callable, Any, Dict, List
 
-DEFAULT_DUMP_MASKS: bool = False
-DEFAULT_DUMP_MASKS_TO: Path = Path("tmp")
 DEFAULT_MERGE_CLASSES: List[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
 DEFAULT_OVERLAP_WIDTH: float = 0.2
@@ -44,21 +42,34 @@ def run(
     src: Path,
     model: Callable[[np.ndarray, Dict[str, Any]], sv.Detections],
     class_names: List[str],
-    dump_masks: bool = DEFAULT_DUMP_MASKS,
-    dump_masks_to: Path = DEFAULT_DUMP_MASKS_TO,
+    dump_masks: dump.MaskConfiguration = dump.MaskConfiguration(),
+    erosion: erosion.Configuration = erosion.Configuration(),
+    logger: logging.Logger = LOGGER,
     merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
+    parameters: Dict[str, Any] = {},
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
-    logger: logging.Logger = LOGGER,
-    parameters: Dict[str, Any] = {},
 ) -> Result:
+    logger.debug(f"{src=}")
+    logger.debug(f"{class_names=}")
+    logger.debug(f"{dump_masks=}")
+    logger.debug(f"{erosion=}")
+    logger.debug(f"{merge_classes=}")
+    logger.debug(f"{overlap_height=}")
+    logger.debug(f"{overlap_width=}")
+    logger.debug(f"{parameters=}")
+    logger.debug(f"{tile_height=}")
+    logger.debug(f"{tile_width=}")
     logger.info("Reading image file...")
     original_img = read_image_file(src)
     logger.info("Reading image file...DONE")
     orig_height, orig_width, *_ = original_img.shape
+    logger.debug(f"{orig_height=}")
+    logger.debug(f"{orig_width=}")
     orig_size = (orig_width, orig_height)
+    logger.debug(f"{orig_size=}")
     logger.info("Creating tiles...")
     tiles = tiling.run(
         original_img,
@@ -101,13 +112,15 @@ def run(
         masks,
         orig_size,
         (tile_width, tile_height),
+        erosion=erosion,
         dump_masks=dump_masks,
-        dump_masks_to=dump_masks_to,
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")
     all_class_names = [class_names[i] for i in class_indices]
+    logger.debug(f"{all_class_names=}")
     instance_class_names = [class_names[i.class_index] for i in instances]
+    logger.debug(f"{instance_class_names=}")
     return Result(
         class_names=class_names,
         instances=instances,

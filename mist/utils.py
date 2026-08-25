@@ -2,12 +2,15 @@
 
 import cv2
 import io
+import logging
 import mimetypes
 import numpy as np
 import tifffile
 
 from pathlib import Path
 from typing import Optional
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
 
 BIT_DEPTH_DTYPE: str = "uint8"
 COLOR_CHANNEL_COUNT: int = 3
@@ -32,12 +35,15 @@ def count_channels(img: np.ndarray) -> int:
     return img.shape[-1] if img.ndim == 3 else 1
 
 
-def correct_cv_image(src: np.ndarray) -> np.ndarray:
+def correct_cv_image(src: np.ndarray, logger: logging.Logger = LOGGER) -> np.ndarray:
+    logger.debug(f"{src.dtype=}")
     if src.dtype == BIT_DEPTH_DTYPE:
         corrected_image = src
     else:
         src_max = np.max(src)
+        logger.debug(f"{src_max=}")
         src_min = np.min(src)
+        logger.debug(f"{src_min=}")
         if src_max == src_min:
             normalized_image = src.astype(np.float32)
         else:
@@ -45,14 +51,19 @@ def correct_cv_image(src: np.ndarray) -> np.ndarray:
                 np.float32
             )
         corrected_image = np.round(normalized_image * 256).astype(BIT_DEPTH_DTYPE)
-    if count_channels(corrected_image) < COLOR_CHANNEL_COUNT:
+    channels_count = count_channels(corrected_image)
+    logger.debug(f"{channels_count=}")
+    if channels_count < COLOR_CHANNEL_COUNT:
         three_channel_image = cv2.cvtColor(corrected_image, cv2.COLOR_GRAY2BGR)
     else:
         three_channel_image = corrected_image
     return three_channel_image
 
 
-def decode_data(data: bytes, mime_type: str) -> np.ndarray:
+def decode_data(
+    data: bytes, mime_type: str, logger: logging.Logger = LOGGER
+) -> np.ndarray:
+    logger.debug(f"{mime_type=}")
     if mime_type == NPY_MIME_TYPE:
         return np.load(io.BytesIO(data), allow_pickle=True)
     elif mime_type == TIFF_MIME_TYPE:
@@ -64,7 +75,10 @@ def decode_data(data: bytes, mime_type: str) -> np.ndarray:
         return correct_cv_image(src)
 
 
-def is_image_file_supported(file_name: str) -> Optional[str]:
+def is_image_file_supported(
+    file_name: str, logger: logging.Logger = LOGGER
+) -> Optional[str]:
+    logger.debug(f"{file_name=}")
     SUPPORTED_MIME_TYPES = [
         JPEG_MIME_TYPE,
         NPY_MIME_TYPE,
@@ -72,14 +86,17 @@ def is_image_file_supported(file_name: str) -> Optional[str]:
         TIFF_MIME_TYPE,
     ]
     mime_type, _ = mimetypes.guess_type(file_name)
+    logger.debug(f"{mime_type=}")
     if mime_type in SUPPORTED_MIME_TYPES:
         return mime_type
     else:
         return None
 
 
-def read_image_file(source: Path) -> np.ndarray:
+def read_image_file(source: Path, logger: logging.Logger = LOGGER) -> np.ndarray:
+    logger.debug(f"{source=}")
     mime_type = is_image_file_supported(source.name)
+    logger.debug(f"{mime_type=}")
     if mime_type is None:
         raise UnsupportedImageFile(source)
     with open(source, "rb+") as f:

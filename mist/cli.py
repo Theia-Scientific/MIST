@@ -6,18 +6,17 @@ import logging
 import numpy as np
 import os
 import supervision as sv
+import sys
 import tempfile
 import typer
 import zipfile
 
-from mist import __app_name__, detecting, utils, visualizing
+from mist import __app_name__, detecting, dump, erosion, utils, visualizing
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 from ultralytics.models import YOLO
-
-logging.getLogger("matplotlib.font_manager").disabled = True
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 PREFIX: str = f"{__app_name__.upper()}"
@@ -85,14 +84,44 @@ def main(
         help="The images to run tiled inference with the weights file."
     ),
     device: str = typer.Option(
-        "cuda:0", help="The device to use for inference. Use 'mps' for Apple Silicon."
+        "cuda:0",
+        help="The device to use for inference. Use 'mps' for Apple" "Silicon.",
     ),
-    dump_masks: bool = typer.Option(
-        detecting.DEFAULT_DUMP_MASKS, help="Creates PNGs of masks during merging."
+    dump_class_masks: bool = typer.Option(
+        dump.DEFAULT_MASK_CLASS, help="Creates PNGs of class masks during merging."
+    ),
+    dump_data_masks: bool = typer.Option(
+        dump.DEFAULT_MASK_DATA, help="Creates PNGs of data masks during merging."
+    ),
+    dump_erosion_masks: bool = typer.Option(
+        dump.DEFAULT_MASK_ERODE, help="Creates PNGs of erosion masks during merging."
+    ),
+    dump_instance_masks: bool = typer.Option(
+        dump.DEFAULT_MASK_INSTANCE,
+        help="Creates PNGs of instance masks during merging.",
     ),
     dump_masks_to: Path = typer.Option(
-        detecting.DEFAULT_DUMP_MASKS_TO,
+        dump.DEFAULT_MASK_TO,
         help="Location to create PNGs of masks during merging.",
+    ),
+    erosion_enabled: bool = typer.Option(
+        erosion.DEFAULT_ENABLED,
+        "--erosion/--no-erosion",
+        help=(
+            "Enable an erode morphological operation on each instance mask "
+            "before merging."
+        ),
+    ),
+    erosion_iterations: int = typer.Option(
+        erosion.DEFAULT_ITERATIONS,
+        help="Number of erode operations to execute. Ignored if erosion is disabled.",
+    ),
+    erosion_size: int = typer.Option(
+        erosion.DEFAULT_SIZE,
+        help=(
+            "Size of the square kernel to use during the erosion operation. "
+            "Ignored if erosion is disabled."
+        ),
     ),
     inference_confidence: float = typer.Option(
         0.35,
@@ -119,15 +148,24 @@ def main(
     ),
     overlap_height: float = typer.Option(
         detecting.DEFAULT_OVERLAP_HEIGHT,
-        help="The amount of overlap in the Y direction as a ratio between 0.0 and 1.0.",
+        help=(
+            "The amount of overlap in the Y direction as a ratio between 0.0 "
+            "and 1.0."
+        ),
     ),
     overlap_width: float = typer.Option(
         detecting.DEFAULT_OVERLAP_WIDTH,
-        help="The amount of overlap in the X direction as a ratio between 0.0 and 1.0.",
+        help=(
+            "The amount of overlap in the X direction as a ratio between 0.0 "
+            "and 1.0."
+        ),
     ),
     random_object_colors: bool = typer.Option(
         False,
-        help="Use random colors for each instance; otherwise, select random color for each class.",
+        help=(
+            "Use random colors for each instance; otherwise, select random "
+            "color for each class."
+        ),
     ),
     show: bool = typer.Option(True, help="Show visualization"),
     show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
@@ -164,7 +202,7 @@ def main(
 
     def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
         return sv.Detections.from_ultralytics(
-            model(
+            model(  # pyright: ignore
                 image,
                 agnostic_nms=parameters.get("agnostic_nms", False),
                 device=parameters.get("device", "cuda:0"),
@@ -185,8 +223,18 @@ def main(
             src,
             predict,
             class_names=[name for _, name in sorted(model.names.items())],
-            dump_masks=dump_masks,
-            dump_masks_to=dump_masks_to,
+            dump_masks=dump.MaskConfiguration(
+                clazz=dump_class_masks,
+                data=dump_data_masks,
+                erode=dump_erosion_masks,
+                instance=dump_instance_masks,
+                to=dump_masks_to,
+            ),
+            erosion=erosion.Configuration(
+                enabled=erosion_enabled,
+                iterations=erosion_iterations,
+                size=erosion_size,
+            ),
             merge_classes=merge_classes,
             overlap_height=overlap_height,
             overlap_width=overlap_width,
@@ -220,7 +268,7 @@ def main(
             )
             LOGGER.info("Visualizing results...DONE")
         results.append(Result(source=str(src), stats=result.stats).model_dump())
-    json.dumps(results)
+    json.dump(results, sys.stdout)
 
 
 if __name__ == "__main__":
