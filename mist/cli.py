@@ -6,6 +6,7 @@ import logging
 import numpy as np
 import os
 import supervision as sv
+import sys
 import tempfile
 import typer
 import zipfile
@@ -267,7 +268,7 @@ def main(
             )
             LOGGER.info("Visualizing results...DONE")
         results.append(Result(source=str(src), stats=result.stats).model_dump())
-    json.dumps(results)
+    json.dump(results, sys.stdout)
 
 
 if __name__ == "__main__":
