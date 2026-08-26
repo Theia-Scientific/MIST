@@ -26,7 +26,7 @@ classifiers = [
 dependencies = [
     "imagecodecs",
     "natsort",
-    "opencv-python",
+    "opencv-python-headless",
     "pydantic",
     "supervision>=0.30",
     "tifffile",
@@ -48,7 +48,7 @@ dev = [
     "pytest-mock",
     "twine"
 ]
-cli = ["matplotlib", "PyQt6", "typer", "ultralytics"]
+cli = ["typer", "ultralytics-opencv-headless"]
 
 [project.scripts]
 mist = "mist.cli:app"
