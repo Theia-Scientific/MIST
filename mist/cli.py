@@ -11,7 +11,7 @@ import tempfile
 import typer
 import zipfile
 
-from mist import __app_name__, detecting, dump, erosion, utils, visualizing
+from mist import __app_name__, detecting, dump, erosion, utils
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
@@ -160,26 +160,11 @@ def main(
             "and 1.0."
         ),
     ),
-    random_object_colors: bool = typer.Option(
-        False,
-        help=(
-            "Use random colors for each instance; otherwise, select random "
-            "color for each class."
-        ),
-    ),
-    show: bool = typer.Option(True, help="Show visualization"),
-    show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
     tile_height: int = typer.Option(
         detecting.DEFAULT_TILE_HEIGHT, help="The height of a tile in pixels."
     ),
     tile_width: int = typer.Option(
         detecting.DEFAULT_TILE_WIDTH, help="The width of a tile in pixels."
-    ),
-    visualize_classes: List[int] = typer.Option(
-        [],
-        "--visualize-classes",
-        "-C",
-        help="Only visualize instances with these class indices.",
     ),
     verbose: bool = typer.Option(
         False,
@@ -251,22 +236,6 @@ def main(
             },
         )
         LOGGER.info("Detecting...DONE")
-        if show:
-            LOGGER.info("Visualizing results...")
-            visual_tiles = []
-            if show_tiles:
-                visual_tiles = result.visual_tiles
-            else:
-                visual_tiles = []
-            visualizing.run(
-                result.instances,
-                result.original_image,
-                result.class_names,
-                tiles=visual_tiles,
-                random_object_colors=random_object_colors,
-                show_classes_list=visualize_classes,
-            )
-            LOGGER.info("Visualizing results...DONE")
         results.append(Result(source=str(src), stats=result.stats).model_dump())
     json.dump(results, sys.stdout)
 
