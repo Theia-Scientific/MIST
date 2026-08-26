@@ -249,7 +249,8 @@ def main(
         LOGGER.info("Detecting...DONE")
         results.append(Result(source=str(src), stats=result.stats).model_dump())
         LOGGER.info("Saving...")
-
+        # TODO: Add annotating with Supervision
+        # TODO: Save to disk
         LOGGER.info("Saving...DONE")
 
     json.dump(results, sys.stdout)
