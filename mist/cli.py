@@ -146,6 +146,12 @@ def main(
         "-c",
         help="Only merge instances with these class indices.",
     ),
+    output: Optional[Path] = typer.Option(
+        None,
+        "--output",
+        "-o",
+        help="The destination for saving annotated images and detections.",
+    ),
     overlap_height: float = typer.Option(
         detecting.DEFAULT_OVERLAP_HEIGHT,
         help=(
@@ -201,6 +207,11 @@ def main(
             )[0]
         )
 
+    if output is None:
+        dst = Path(os.getcwd())
+    else:
+        dst = output
+
     results = []
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
@@ -237,6 +248,10 @@ def main(
         )
         LOGGER.info("Detecting...DONE")
         results.append(Result(source=str(src), stats=result.stats).model_dump())
+        LOGGER.info("Saving...")
+
+        LOGGER.info("Saving...DONE")
+
     json.dump(results, sys.stdout)
 
 
