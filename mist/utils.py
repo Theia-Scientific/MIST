@@ -5,10 +5,10 @@ import io
 import logging
 import mimetypes
 import numpy as np
+import numpy.typing as npt
 import tifffile
 
 from pathlib import Path
-from typing import Optional
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -27,15 +27,18 @@ class ImageDecodeError(Exception):
 
 
 class UnsupportedImageFile(Exception):
-    def __init__(self, path: Path):
-        self.path = path
+    def __init__(self, path: Path, msg: str = ""):
+        self.path: Path = path
+        super().__init__(self, msg)
 
 
-def count_channels(img: np.ndarray) -> int:
+def count_channels(img: cv2.typing.MatLike | npt.NDArray[np.uint8]) -> int:
     return img.shape[-1] if img.ndim == 3 else 1
 
 
-def correct_cv_image(src: np.ndarray, logger: logging.Logger = LOGGER) -> np.ndarray:
+def correct_cv_image(
+    src: cv2.typing.MatLike | npt.NDArray[np.uint8], logger: logging.Logger = LOGGER
+) -> cv2.typing.MatLike | npt.NDArray[np.uint8]:
     logger.debug(f"{src.dtype=}")
     if src.dtype == BIT_DEPTH_DTYPE:
         corrected_image = src
@@ -62,7 +65,7 @@ def correct_cv_image(src: np.ndarray, logger: logging.Logger = LOGGER) -> np.nda
 
 def decode_data(
     data: bytes, mime_type: str, logger: logging.Logger = LOGGER
-) -> np.ndarray:
+) -> cv2.typing.MatLike | npt.NDArray[np.uint8]:
     logger.debug(f"{mime_type=}")
     if mime_type == NPY_MIME_TYPE:
         return np.load(io.BytesIO(data), allow_pickle=True)
@@ -77,7 +80,7 @@ def decode_data(
 
 def is_image_file_supported(
     file_name: str, logger: logging.Logger = LOGGER
-) -> Optional[str]:
+) -> str | None:
     logger.debug(f"{file_name=}")
     SUPPORTED_MIME_TYPES = [
         JPEG_MIME_TYPE,
