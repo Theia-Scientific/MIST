@@ -96,7 +96,9 @@ def is_image_file_supported(
         return None
 
 
-def read_image_file(source: Path, logger: logging.Logger = LOGGER) -> np.ndarray:
+def read_image_file(
+    source: Path, logger: logging.Logger = LOGGER
+) -> cv2.typing.MatLike | npt.NDArray[np.uint8]:
     logger.debug(f"{source=}")
     mime_type = is_image_file_supported(source.name)
     logger.debug(f"{mime_type=}")
