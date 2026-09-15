@@ -15,7 +15,7 @@ from mist import __app_name__, detecting, dump, erosion, utils
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
+from typing import Any
 from ultralytics.models import YOLO
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -29,11 +29,14 @@ class Result(BaseModel):
     stats: detecting.Stats
 
 
-def map_verbosity(enabled: bool) -> str:
-    if enabled:
-        return "DEBUG"
+def map_verbosity(count: int) -> str:
+    if count == 1:
+        log_level = "INFO"
+    elif count >= 2:
+        log_level = "DEBUG"
     else:
-        return "INFO"
+        log_level = "WARNING"
+    return log_level
 
 
 def version_callback(value: bool):
