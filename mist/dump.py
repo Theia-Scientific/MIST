@@ -42,7 +42,10 @@ class MaskConfiguration(BaseModel):
         )
 
     def write_class(
-        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
+        self,
+        img: cv2.typing.MatLike | npt.NDArray[np.uint8],
+        class_index: int,
+        instance_index: int,
     ) -> bool:
         if self.clazz:
             return self.write(img, class_index, instance_index, "c")
@@ -50,7 +53,10 @@ class MaskConfiguration(BaseModel):
             return False
 
     def write_data(
-        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
+        self,
+        img: cv2.typing.MatLike | npt.NDArray[np.uint8],
+        class_index: int,
+        instance_index: int,
     ) -> bool:
         if self.data:
             return self.write(img, class_index, instance_index, "m")
@@ -58,7 +64,10 @@ class MaskConfiguration(BaseModel):
             return False
 
     def write_erode(
-        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
+        self,
+        img: cv2.typing.MatLike | npt.NDArray[np.uint8],
+        class_index: int,
+        instance_index: int,
     ) -> bool:
         if self.erode:
             return self.write(img, class_index, instance_index, "e")
@@ -66,7 +75,10 @@ class MaskConfiguration(BaseModel):
             return False
 
     def write_instance(
-        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
+        self,
+        img: cv2.typing.MatLike | npt.NDArray[np.uint8],
+        class_index: int,
+        instance_index: int,
     ) -> bool:
         if self.instance:
             return self.write(img, class_index, instance_index, "i")
