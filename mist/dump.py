@@ -2,6 +2,7 @@
 
 import cv2
 import numpy as np
+import numpy.typing as npt
 
 from pathlib import Path
 from pydantic import BaseModel
@@ -25,7 +26,11 @@ class MaskConfiguration(BaseModel):
         return self.clazz or self.data or self.erode or self.instance
 
     def write(
-        self, img: np.ndarray, class_index: int, instance_index: int, suffix: str
+        self,
+        img: cv2.typing.MatLike | npt.NDArray[np.uint8],
+        class_index: int,
+        instance_index: int,
+        suffix: str,
     ) -> bool:
         return not cv2.imwrite(
             str(
@@ -37,7 +42,7 @@ class MaskConfiguration(BaseModel):
         )
 
     def write_class(
-        self, img: np.ndarray, class_index: int, instance_index: int
+        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
     ) -> bool:
         if self.clazz:
             return self.write(img, class_index, instance_index, "c")
@@ -45,7 +50,7 @@ class MaskConfiguration(BaseModel):
             return False
 
     def write_data(
-        self, img: np.ndarray, class_index: int, instance_index: int
+        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
     ) -> bool:
         if self.data:
             return self.write(img, class_index, instance_index, "m")
@@ -53,7 +58,7 @@ class MaskConfiguration(BaseModel):
             return False
 
     def write_erode(
-        self, img: np.ndarray, class_index: int, instance_index: int
+        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
     ) -> bool:
         if self.erode:
             return self.write(img, class_index, instance_index, "e")
@@ -61,7 +66,7 @@ class MaskConfiguration(BaseModel):
             return False
 
     def write_instance(
-        self, img: np.ndarray, class_index: int, instance_index: int
+        self, img: npt.NDArray[np.uint8], class_index: int, instance_index: int
     ) -> bool:
         if self.instance:
             return self.write(img, class_index, instance_index, "i")
