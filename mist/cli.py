@@ -236,7 +236,7 @@ def main(
         dst = Path(os.getcwd())
     else:
         dst = output
-    results = []
+    results: list[dict[str, Any]] = []
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
         result = detecting.run(
