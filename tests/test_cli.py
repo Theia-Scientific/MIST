@@ -12,9 +12,7 @@ from mist.cli import (
     map_verbosity,
 )
 from pathlib import Path
-from pytest_mock import MockerFixture
 from typer.testing import CliRunner
-from typing import Any
 
 runner = CliRunner()
 
