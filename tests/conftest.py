@@ -2,21 +2,23 @@
 
 import cv2
 import numpy as np
+import numpy.typing as npt
 import pytest
 import supervision as sv
 
-from typing import Any, Callable, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Callable
 from ultralytics.models import YOLO
 from ultralytics.utils.downloads import attempt_download_asset, download
 
 
 @pytest.fixture(scope="session")
-def assets(tmp_path_factory):
+def assets(tmp_path_factory: pytest.TempPathFactory) -> Path:
     return tmp_path_factory.mktemp("assets")
 
 
 @pytest.fixture(scope="session")
-def weights_file(assets):
+def weights_file(assets: Path) -> Path:
     weights_file = attempt_download_asset(
         "weights/yolov8n-seg.pt", dir=assets, progress=False
     )
@@ -24,65 +26,69 @@ def weights_file(assets):
 
 
 @pytest.fixture(scope="session")
-def bus_jpg(assets):
+def bus_jpg(assets: Path) -> Path:
     bus_jpg = "bus.jpg"
     download(f"https://www.ultralytics.com/images/{bus_jpg}", dir=assets)
     return assets.joinpath(bus_jpg)
 
 
 @pytest.fixture
-def blank_image() -> np.ndarray:
+def blank_image() -> npt.NDArray[np.uint8]:
     return np.zeros((4096, 4096, 3), dtype=np.uint8)
 
 
 @pytest.fixture
-def blank_jpg(blank_image, tmp_path):
+def blank_jpg(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     jpg_file = tmp_path.joinpath("image.jpg")
-    cv2.imwrite(str(jpg_file), blank_image)
-    yield jpg_file
+    _ = cv2.imwrite(str(jpg_file), blank_image)
+    return jpg_file
 
 
 @pytest.fixture
-def blank_npy(blank_image, tmp_path):
+def blank_npy(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     npy_file = tmp_path.joinpath("image.npy")
     np.save(npy_file, blank_image)
-    yield npy_file
+    return npy_file
 
 
 @pytest.fixture
-def blank_png(blank_image, tmp_path):
+def blank_png(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     png_file = tmp_path.joinpath("image.png")
-    cv2.imwrite(str(png_file), blank_image)
-    yield png_file
+    _ = cv2.imwrite(str(png_file), blank_image)
+    return png_file
 
 
 @pytest.fixture
-def blank_tif(blank_image, tmp_path):
+def blank_tif(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     tif_file = tmp_path.joinpath("image.tif")
-    cv2.imwrite(str(tif_file), blank_image)
-    yield tif_file
+    _ = cv2.imwrite(str(tif_file), blank_image)
+    return tif_file
 
 
 @pytest.fixture(scope="session")
 def model(
-    weights_file,
-) -> Tuple[Callable[[np.ndarray, Dict[str, Any]], sv.Detections], List[str]]:
+    weights_file: Path,
+) -> tuple[Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections], list[str]]:
     model = YOLO(weights_file)
     class_names = [name for _, name in sorted(model.names.items())]
 
-    def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+    def predict(
+        image: npt.NDArray[np.uint8], parameters: dict[str, Any]
+    ) -> sv.Detections:
         return sv.Detections.from_ultralytics(
-            model(
-                image,
-                agnostic_nms=parameters.get("agnostic_nms", False),
-                device=parameters.get("device", "cpu"),
-                classes=parameters.get("classes", None),
-                conf=parameters.get("confidence", 0.35),
-                imgsz=parameters.get("image_size", 640),
-                iou=parameters.get("iou", 0.7),
-                max_det=parameters.get("maximum_detections", 1000),
-                retina_masks=parameters.get("retina_masks", True),
-                verbose=parameters.get("verbose", False),
+            list(
+                model(
+                    image,
+                    agnostic_nms=parameters.get("agnostic_nms", False),
+                    device=parameters.get("device", "cpu"),
+                    classes=parameters.get("classes", None),
+                    conf=parameters.get("confidence", 0.35),
+                    imgsz=parameters.get("image_size", 640),
+                    iou=parameters.get("iou", 0.7),
+                    max_det=parameters.get("maximum_detections", 1000),
+                    retina_masks=parameters.get("retina_masks", True),
+                    verbose=parameters.get("verbose", False),
+                )
             )[0]
         )
 
@@ -91,9 +97,9 @@ def model(
 
 @pytest.fixture(scope="session")
 def empty_detections() -> (
-    Tuple[Callable[[np.ndarray, Dict[str, Any]], sv.Detections], List[str]]
+    tuple[Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections], list[str]]
 ):
-    def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+    def predict(image: npt.NDArray[np.uint8], parameters: dict[str, Any]) -> sv.Detections:
         _ = image
         _ = parameters
 
