@@ -14,9 +14,12 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict
 from typing import Callable, Any
 
+DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
+DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
 DEFAULT_OVERLAP_WIDTH: float = 0.2
+DEFAULT_PARAMETERS: dict[str, Any] = {}
 DEFAULT_SHOW_TILES: bool = False
 DEFAULT_TILE_HEIGHT: int = 640
 DEFAULT_TILE_WIDTH: int = 640
@@ -43,13 +46,13 @@ def run(
     src: Path,
     model: Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections],
     class_names: list[str],
-    dump_masks: dump.MaskConfiguration = dump.MaskConfiguration(),
-    erosion: erosion.Configuration = erosion.Configuration(),
+    dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
+    erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
     logger: logging.Logger = LOGGER,
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
-    parameters: dict[str, Any] = {},
+    parameters: dict[str, Any] = DEFAULT_PARAMETERS,
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
 ) -> Result:
@@ -79,9 +82,9 @@ def run(
         overlap=(overlap_width, overlap_height),
     )
     logger.info("Creating tiles...DONE")
-    masks = []
-    class_indices = []
-    visual_tiles = []
+    masks: list[merging.Mask] = []
+    class_indices: list[int] = []
+    visual_tiles: list[VisualTile] = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
         detections = model(tile.img, parameters)
@@ -90,7 +93,9 @@ def run(
         else:
             class_indices.extend(detections.class_id.tolist())
         if detections.mask is None:
-            masks_data = np.zeros((len(detections), tile_height, tile_width))
+            masks_data = np.zeros(
+                (len(detections), tile_height, tile_width), dtype=bool
+            )
         else:
             masks_data = detections.mask
         masks.extend(
