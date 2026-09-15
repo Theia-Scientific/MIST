@@ -2,35 +2,36 @@
 
 import logging
 import numpy as np
+import numpy.typing as npt
 
 from pydantic import BaseModel, ConfigDict
-from typing import List, Tuple
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class Tile(BaseModel):
-    img: np.ndarray
+    img: npt.NDArray[np.uint8]
     index: int
     x_start: int
     y_start: int
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 
 
 def run(
     src_img: np.ndarray,
     logger: logging.Logger = LOGGER,
-    tile_size: Tuple[int, int] = (640, 640),
-    overlap: Tuple[float, float] = (0.2, 0.2),
-) -> List[Tile]:
+    tile_size: tuple[int, int] = (640, 640),
+    overlap: tuple[float, float] = (0.2, 0.2),
+) -> list[Tile]:
     logger.debug(f"{src_img=}")
     logger.debug(f"{tile_size=}")
     logger.debug(f"{overlap=}")
-    image_height, image_width, *_ = src_img.shape
+    src_img_shape: tuple[int, ...] = src_img.shape
+    image_height, image_width, *_ = src_img_shape
     tile_width, tile_height = tile_size
     overlap_width_ratio, overlap_height_ratio = overlap
-    tiles = []
+    tiles: list[Tile] = []
     y_max = 0
     y_min = 0
     y_overlap = int(overlap_height_ratio * tile_height)
