@@ -2,6 +2,7 @@
 
 import logging
 import numpy as np
+import numpy.typing as npt
 import supervision as sv
 
 from collections import Counter
@@ -11,9 +12,9 @@ from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
-from typing import Callable, Any, Dict, List
+from typing import Callable, Any
 
-DEFAULT_MERGE_CLASSES: List[int] = []
+DEFAULT_MERGE_CLASSES: list[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
 DEFAULT_OVERLAP_WIDTH: float = 0.2
 DEFAULT_SHOW_TILES: bool = False
@@ -24,31 +25,31 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
 class Stats(BaseModel):
-    merged: Counter
-    unmerged: Counter
+    merged: Counter[str]
+    unmerged: Counter[str]
 
 
 class Result(BaseModel):
-    class_names: List[str]
-    instances: List[Instance]
-    original_image: np.ndarray
+    class_names: list[str]
+    instances: list[Instance]
+    original_image: npt.NDArray[np.uint8]
     stats: Stats
-    visual_tiles: List[VisualTile]
+    visual_tiles: list[VisualTile]
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 
 
 def run(
     src: Path,
-    model: Callable[[np.ndarray, Dict[str, Any]], sv.Detections],
-    class_names: List[str],
+    model: Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections],
+    class_names: list[str],
     dump_masks: dump.MaskConfiguration = dump.MaskConfiguration(),
     erosion: erosion.Configuration = erosion.Configuration(),
     logger: logging.Logger = LOGGER,
-    merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
+    merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
-    parameters: Dict[str, Any] = {},
+    parameters: dict[str, Any] = {},
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
 ) -> Result:
@@ -65,7 +66,8 @@ def run(
     logger.info("Reading image file...")
     original_img = read_image_file(src)
     logger.info("Reading image file...DONE")
-    orig_height, orig_width, *_ = original_img.shape
+    original_shape: tuple[int, ...] = original_img.shape
+    orig_height, orig_width, *_ = original_shape
     logger.debug(f"{orig_height=}")
     logger.debug(f"{orig_width=}")
     orig_size = (orig_width, orig_height)
