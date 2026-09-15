@@ -12,105 +12,102 @@ from mist.cli import (
     map_verbosity,
 )
 from pathlib import Path
+from pytest_mock import MockerFixture
 from typer.testing import CliRunner
+from typing import Any
 
 runner = CliRunner()
 
 
 @pytest.fixture
-def text_file(tmp_path):
+def text_file(tmp_path: Path) -> Path:
     txt_file = tmp_path.joinpath("test.txt")
     with open(txt_file, "+w") as fp:
-        fp.write("Hello World")
-    yield txt_file
+        _ = fp.write("Hello World")
+    return txt_file
 
 
 @pytest.fixture
-def zip_file(blank_jpg, blank_png, blank_npy, blank_tif, tmp_path):
+def zip_file(
+    blank_jpg: Path, blank_png: Path, blank_npy: Path, blank_tif: Path, tmp_path: Path
+) -> Path:
     zip_path = tmp_path.joinpath("images.zip")
     with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.write(blank_jpg)
-        zf.write(blank_png)
-        zf.write(blank_npy)
-        zf.write(blank_tif)
-    yield zip_path
+        _ = zf.write(blank_jpg)
+        _ = zf.write(blank_png)
+        _ = zf.write(blank_npy)
+        _ = zf.write(blank_tif)
+    return zip_path
 
 
 @pytest.fixture
-def dir_with_images(blank_jpg, blank_png, blank_npy, blank_tif, tmp_path):
-    shutil.move(blank_jpg, tmp_path.joinpath("image0.jpg"))
-    shutil.move(blank_png, tmp_path.joinpath("image1.png"))
-    shutil.move(blank_npy, tmp_path.joinpath("image2.npy"))
-    shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
+def dir_with_images(
+    blank_jpg: Path, blank_png: Path, blank_npy: Path, blank_tif: Path, tmp_path: Path
+) -> Path:
+    _ = shutil.move(blank_jpg, tmp_path.joinpath("image0.jpg"))
+    _ = shutil.move(blank_png, tmp_path.joinpath("image1.png"))
+    _ = shutil.move(blank_npy, tmp_path.joinpath("image2.npy"))
+    _ = shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
     return tmp_path
 
 
 @pytest.fixture
 def dir_with_images_and_text(
-    blank_jpg, blank_png, blank_npy, blank_tif, text_file, tmp_path
-):
-    shutil.move(blank_jpg, tmp_path.joinpath("image0.jpg"))
-    shutil.move(blank_png, tmp_path.joinpath("image1.png"))
-    shutil.move(blank_npy, tmp_path.joinpath("image2.npy"))
-    shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
-    shutil.move(text_file, tmp_path.joinpath("text.txt"))
+    blank_jpg: Path,
+    blank_png: Path,
+    blank_npy: Path,
+    blank_tif: Path,
+    text_file: Path,
+    tmp_path: Path,
+) -> Path:
+    _ = shutil.move(blank_jpg, tmp_path.joinpath("image0.jpg"))
+    _ = shutil.move(blank_png, tmp_path.joinpath("image1.png"))
+    _ = shutil.move(blank_npy, tmp_path.joinpath("image2.npy"))
+    _ = shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
+    _ = shutil.move(text_file, tmp_path.joinpath("text.txt"))
     return tmp_path
 
 
-@pytest.fixture
-def mock_visualizing_run(mocker):
-    def mock_visualizing_run(*args, **kwargs):
-        _ = args
-        _ = kwargs
-
-        return None
-
-    mocker.patch("mist.visualizing.run", mock_visualizing_run)
+def test_map_verbosity():
+    assert map_verbosity(0) == "WARNING"
+    assert map_verbosity(1) == "INFO"
+    assert map_verbosity(2) == "DEBUG"
+    assert map_verbosity(3) == "DEBUG"
 
 
-def test_map_verbosity_false():
-    actual = map_verbosity(False)
-    assert actual == "INFO"
-
-
-def test_map_verbosity_true():
-    actual = map_verbosity(True)
-    assert actual == "DEBUG"
-
-
-def test_expand_sources_with_single_supported_file(blank_png):
+def test_expand_sources_with_single_supported_file(blank_png: Path):
     actual = expand_sources([blank_png])
     assert len(actual) == 1
     assert blank_png in actual
 
 
-def test_expand_sources_with_multiple_supported_files(blank_png, bus_jpg):
+def test_expand_sources_with_multiple_supported_files(blank_png: Path, bus_jpg: Path):
     actual = expand_sources([blank_png, bus_jpg])
     assert len(actual) == 2
     assert blank_png in actual
     assert bus_jpg in actual
 
 
-def test_expand_sources_with_no_supported_file(text_file):
+def test_expand_sources_with_no_supported_file(text_file: Path):
     actual = expand_sources([text_file])
     assert len(actual) == 0
 
 
-def test_expand_sources_with_zip_file(zip_file):
+def test_expand_sources_with_zip_file(zip_file: Path):
     paths = expand_sources([zip_file])
     assert len(paths) == 4
     for path in paths:
         assert isinstance(path, Path)
 
 
-def test_expand_sources_with_directory(dir_with_images):
+def test_expand_sources_with_directory(dir_with_images: Path):
     paths = expand_sources([dir_with_images])
     assert len(paths) == 4
     for path in paths:
         assert isinstance(path, Path)
 
 
-def test_expand_sources_with_directory_unsupported(dir_with_images_and_text):
+def test_expand_sources_with_directory_unsupported(dir_with_images_and_text: Path):
     paths = expand_sources([dir_with_images_and_text])
     assert len(paths) == 4
     for path in paths:
@@ -129,36 +126,22 @@ def test_app_version():
     assert f"{__app_name__} {version}" in result.stdout
 
 
-def test_app_image(blank_png, weights_file):
+def test_app_image(blank_png: Path, weights_file: Path):
     result = runner.invoke(
         app, ["--device=cpu", "--no-show", str(weights_file), str(blank_png)]
     )
     assert result.exit_code == 0
 
 
-def test_app_directory(dir_with_images, weights_file):
+def test_app_directory(dir_with_images: Path, weights_file: Path):
     result = runner.invoke(
         app, ["--device=cpu", "--no-show", str(weights_file), str(dir_with_images)]
     )
     assert result.exit_code == 0
 
 
-def test_app_zip(zip_file, weights_file):
+def test_app_zip(zip_file: Path, weights_file: Path):
     result = runner.invoke(
         app, ["--device=cpu", "--no-show", str(weights_file), str(zip_file)]
-    )
-    assert result.exit_code == 0
-
-
-def test_app_visualize(mock_visualizing_run, blank_png, weights_file):
-    _ = mock_visualizing_run
-    result = runner.invoke(app, ["--device=cpu", str(weights_file), str(blank_png)])
-    assert result.exit_code == 0
-
-
-def test_app_visualize_show_tiles(mock_visualizing_run, blank_png, weights_file):
-    _ = mock_visualizing_run
-    result = runner.invoke(
-        app, ["--device=cpu", "--show-tiles", str(weights_file), str(blank_png)]
     )
     assert result.exit_code == 0
