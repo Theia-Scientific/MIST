@@ -19,7 +19,7 @@ DEFAULT_MERGE_CLASSES: list[int] = []
 
 
 class Mask(BaseModel, arbitrary_types_allowed=True):
-    data: npt.NDArray[np.uint8]
+    data: npt.NDArray[np.bool]
     offset_x: int
     offset_y: int
 
