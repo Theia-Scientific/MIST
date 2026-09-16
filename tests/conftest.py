@@ -79,7 +79,6 @@ def model(
                     image,
                     agnostic_nms=False,
                     device="cpu",
-                    classes=class_names,
                     conf=0.35,
                     imgsz=640,
                     iou=0.7,
