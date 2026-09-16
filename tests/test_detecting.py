@@ -26,13 +26,13 @@ def bus_image(bus_jpg: Path) -> npt.NDArray[np.uint8]:
 def test_run(bus_image: npt.NDArray[np.uint8], model: Model):
     predict, class_names = model
     detections = run(bus_image, predict, class_names)
-    assert len(detections) > 0
+    assert detections is not None
 
 
 def test_run_with_no_predictions(blank_image: npt.NDArray[np.uint8], model: Model):
     predict, class_names = model
     detections = run(blank_image, predict, class_names)
-    assert len(detections) > 0
+    assert detections is not None
 
 
 def test_run_with_erosion(bus_image: npt.NDArray[np.uint8], model: Model):
@@ -43,7 +43,7 @@ def test_run_with_erosion(bus_image: npt.NDArray[np.uint8], model: Model):
         class_names,
         erosion=ErosionConfiguration(enabled=True),
     )
-    assert len(detections) > 0
+    assert detections is not None
 
 
 def test_run_with_dump_masks(
@@ -58,11 +58,11 @@ def test_run_with_dump_masks(
             clazz=True, data=True, erode=True, instance=True, to=tmp_path
         ),
     )
-    assert len(detections) > 0
+    assert detections is not None
     assert len(os.listdir(tmp_path)) > 0
 
 
 def test_empty_detections(blank_image: npt.NDArray[np.uint8], empty_detections: Model):
     predict, class_names = empty_detections
     detections = run(blank_image, predict, class_names)
-    assert len(detections) == 1
+    assert detections is None

@@ -42,7 +42,7 @@ def run(
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
-) -> sv.Detections:
+) -> sv.Detections | None:
     logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
     logger.debug(f"{dump_masks=}")
@@ -102,19 +102,25 @@ def run(
     logger.debug(f"{all_class_names=}")
     instance_class_names = [class_names[i.class_index] for i in instances]
     logger.debug(f"{instance_class_names=}")
-    return sv.Detections(
-        class_id=np.array([instance.class_index for instance in instances]),
-        confidence=None,
-        data={
-            CLASS_NAME_DATA_FIELD: np.array(instance_class_names),
-            INSTANCE_ID_DATA_FIELD: np.array([instance.id for instance in instances]),
-        },
-        mask=np.array([instance.mask for instance in instances]),
-        metadata={
-            STATS_METADATA_FIELD: Stats(
-                merged=Counter(instance_class_names), unmerged=Counter(all_class_names)
-            ).model_dump()
-        },
-        tracker_id=None,
-        xyxy=np.array([np.array(instance.box) for instance in instances]),
-    )
+    if len(instances) > 0:
+        return sv.Detections(
+            class_id=np.array([instance.class_index for instance in instances]),
+            confidence=None,
+            data={
+                CLASS_NAME_DATA_FIELD: np.array(instance_class_names),
+                INSTANCE_ID_DATA_FIELD: np.array(
+                    [instance.id for instance in instances]
+                ),
+            },
+            mask=(np.array([instance.mask for instance in instances])),
+            metadata={
+                STATS_METADATA_FIELD: Stats(
+                    merged=Counter(instance_class_names),
+                    unmerged=Counter(all_class_names),
+                ).model_dump()
+            },
+            tracker_id=None,
+            xyxy=np.array([np.array(instance.box) for instance in instances]),
+        )
+    else:
+        return None
