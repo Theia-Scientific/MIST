@@ -40,7 +40,7 @@ def blank_image() -> npt.NDArray[np.uint8]:
 @pytest.fixture
 def blank_jpg(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     jpg_file = tmp_path.joinpath("image.jpg")
-    _ = cv2.imwrite(str(jpg_file), blank_image)
+    assert cv2.imwrite(str(jpg_file), blank_image)
     return jpg_file
 
 
@@ -54,14 +54,14 @@ def blank_npy(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
 @pytest.fixture
 def blank_png(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     png_file = tmp_path.joinpath("image.png")
-    _ = cv2.imwrite(str(png_file), blank_image)
+    assert cv2.imwrite(str(png_file), blank_image)
     return png_file
 
 
 @pytest.fixture
 def blank_tif(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     tif_file = tmp_path.joinpath("image.tif")
-    _ = cv2.imwrite(str(tif_file), blank_image)
+    assert cv2.imwrite(str(tif_file), blank_image)
     return tif_file
 
 
