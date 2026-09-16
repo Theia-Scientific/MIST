@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 
+import cv2
 import importlib.metadata
 import logging
 import numpy as np
+import numpy.typing as npt
 import os
 import supervision as sv
 import tempfile
@@ -220,7 +222,9 @@ def main(
     LOGGER.debug(f"{version=}")
     model = YOLO(weights_file)
 
-    def predict(image: np.ndarray, parameters: dict[str, Any]) -> sv.Detections:
+    def predict(
+        image: npt.NDArray[np.uint8], parameters: dict[str, Any]
+    ) -> sv.Detections:
         return sv.Detections.from_ultralytics(
             list(
                 model(
@@ -282,8 +286,14 @@ def main(
         LOGGER.info("Saving...")
         annotator = sv.MaskAnnotator()
         annotated_image = annotator.annotate(src_img, detections)
-
-        # TODO: Save to disk
+        img_dst = dst.joinpath(src.stem + "_mist.png")
+        LOGGER.debug(f"{img_dst=}")
+        result = cv2.imwrite(str(img_dst), annotated_image)
+        LOGGER.debug(f"{result=}")
+        if result:
+            LOGGER.info(f"Successfully saved '{img_dst}' to disk")
+        else:
+            LOGGER.error(f"Failed to save '{img_dst}' to disk")
         LOGGER.info("Saving...DONE")
 
 
