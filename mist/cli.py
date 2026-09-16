@@ -15,7 +15,7 @@ from mist import __app_name__, detecting, dump, erosion, utils
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
-from typing import Annotated, Any
+from typing import Annotated
 from ultralytics.models import YOLO
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
@@ -222,22 +222,20 @@ def main(
     LOGGER.debug(f"{version=}")
     model = YOLO(weights_file)
 
-    def predict(
-        image: npt.NDArray[np.uint8], parameters: dict[str, Any]
-    ) -> sv.Detections:
+    def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         return sv.Detections.from_ultralytics(
             list(
                 model(
                     image,
-                    agnostic_nms=parameters.get("agnostic_nms", False),
-                    device=parameters.get("device", "cuda:0"),
-                    classes=parameters.get("classes", None),
-                    conf=parameters.get("confidence", 0.35),
-                    imgsz=parameters.get("image_size", 640),
-                    iou=parameters.get("iou", 0.7),
-                    max_det=parameters.get("maximum_detections", 1000),
-                    retina_masks=parameters.get("retina_masks", True),
-                    verbose=parameters.get("verbose", False),
+                    agnostic_nms=False,
+                    device=device,
+                    classes=None,
+                    conf=inference_confidence,
+                    imgsz=inference_image_size,
+                    iou=inference_iou,
+                    max_det=inference_max_detections,
+                    retina_masks=True,
+                    verbose=not inference_silent,
                 )
             )[0]
         )
@@ -273,14 +271,6 @@ def main(
             tile_height=tile_height,
             tile_width=tile_width,
             logger=LOGGER,
-            parameters={
-                "confidence": inference_confidence,
-                "device": device,
-                "image_size": inference_image_size,
-                "iou": inference_iou,
-                "maximum_detections": inference_max_detections,
-                "verbose": not inference_silent,
-            },
         )
         LOGGER.info("Detecting...DONE")
         LOGGER.info("Saving...")
