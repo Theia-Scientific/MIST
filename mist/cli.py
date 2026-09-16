@@ -92,7 +92,7 @@ def main(
     device: Annotated[
         str,
         typer.Option(
-            help="The device to use for inference. Use 'mps' for Apple" "Silicon.",
+            help="The device to use for inference. Use 'mps' for Apple Silicon.",
         ),
     ] = "cuda:0",
     dump_class_masks: Annotated[
@@ -240,7 +240,7 @@ def main(
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
         result = detecting.run(
-            src,
+            utils.read_image_file(src),
             predict,
             class_names=[name for _, name in sorted(model.names.items())],
             dump_masks=dump.MaskConfiguration(
