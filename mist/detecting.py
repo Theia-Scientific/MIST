@@ -11,7 +11,7 @@ from mist.instances import Instance
 from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
 from pathlib import Path
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from typing import Callable, Any
 
 DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
@@ -32,14 +32,12 @@ class Stats(BaseModel):
     unmerged: Counter[str]
 
 
-class Result(BaseModel):
+class Result(BaseModel, arbitrary_types_allowed=True):
     class_names: list[str]
     instances: list[Instance]
     original_image: npt.NDArray[np.uint8]
     stats: Stats
     visual_tiles: list[VisualTile]
-
-    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 
 
 def run(
