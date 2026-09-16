@@ -103,7 +103,7 @@ def run(
     instance_class_names = [class_names[i.class_index] for i in instances]
     logger.debug(f"{instance_class_names=}")
     return sv.Detections(
-        class_id=None,
+        class_id=np.array([instance.class_index for instance in instances]),
         confidence=None,
         data={
             CLASS_NAME_DATA_FIELD: np.array(instance_class_names),
