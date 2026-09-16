@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import importlib.metadata
+import os
 import pytest
 import shutil
 import zipfile
@@ -12,6 +13,7 @@ from mist.cli import (
     map_verbosity,
 )
 from pathlib import Path
+from pytest_mock import MockerFixture
 from typer.testing import CliRunner
 
 runner = CliRunner()
@@ -130,6 +132,24 @@ def test_app_image(blank_png: Path, tmp_path: Path, weights_file: Path):
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(blank_png)],
     )
     assert result.exit_code == 0
+
+
+def test_app_no_output(
+    bus_jpg: Path, mocker: MockerFixture, tmp_path: Path, weights_file: Path
+):
+
+    def mock_os_getcwd() -> str:
+        return str(tmp_path)
+
+    _ = mocker.patch("os.getcwd", mock_os_getcwd)
+
+    result = runner.invoke(
+        app,
+        ["--device=cpu", str(weights_file), str(bus_jpg)],
+    )
+    assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 1
+    assert tmp_path.joinpath(bus_jpg.stem + "_mist.png").exists()
 
 
 def test_app_directory(dir_with_images: Path, tmp_path: Path, weights_file: Path):
