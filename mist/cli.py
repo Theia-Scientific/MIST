@@ -273,18 +273,21 @@ def main(
             logger=LOGGER,
         )
         LOGGER.info("Detecting...DONE")
-        LOGGER.info("Saving...")
-        annotator = sv.MaskAnnotator()
-        annotated_image = annotator.annotate(src_img, detections)
-        img_dst = dst.joinpath(src.stem + "_mist.png")
-        LOGGER.debug(f"{img_dst=}")
-        result = cv2.imwrite(str(img_dst), annotated_image)
-        LOGGER.debug(f"{result=}")
-        if result:
-            LOGGER.info(f"Successfully saved '{img_dst}' to disk")
+        if detections is None:
+            LOGGER.warning(f"No detections for the '{src}' image file")
         else:
-            LOGGER.error(f"Failed to save '{img_dst}' to disk")
-        LOGGER.info("Saving...DONE")
+            LOGGER.info("Saving...")
+            annotator = sv.MaskAnnotator()
+            annotated_image = annotator.annotate(src_img, detections)
+            img_dst = dst.joinpath(src.stem + "_mist.png")
+            LOGGER.debug(f"{img_dst=}")
+            result = cv2.imwrite(str(img_dst), annotated_image)
+            LOGGER.debug(f"{result=}")
+            if result:
+                LOGGER.info(f"Successfully saved '{img_dst}' to disk")
+            else:
+                LOGGER.error(f"Failed to save '{img_dst}' to disk")
+            LOGGER.info("Saving...DONE")
 
 
 if __name__ == "__main__":
