@@ -9,7 +9,7 @@ import torch
 
 from mist import dump, erosion
 from mist.instances import Instance
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -18,12 +18,10 @@ DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
 
 
-class Mask(BaseModel):
+class Mask(BaseModel, arbitrary_types_allowed=True):
     data: npt.NDArray[np.uint8]
     offset_x: int
     offset_y: int
-
-    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 
 
 def run(

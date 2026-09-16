@@ -4,18 +4,16 @@ import logging
 import numpy as np
 import numpy.typing as npt
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 
-class Tile(BaseModel):
+class Tile(BaseModel, arbitrary_types_allowed=True):
     img: npt.NDArray[np.uint8]
     index: int
     x_start: int
     y_start: int
-
-    model_config: ConfigDict = ConfigDict(arbitrary_types_allowed=True)
 
 
 def run(
