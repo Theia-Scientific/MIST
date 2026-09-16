@@ -47,7 +47,7 @@ def version_callback(value: bool):
 
 
 def expand_sources(sources: list[Path]) -> list[Path]:
-    expanded_sources = []
+    expanded_sources: list[Path] = []
     for source in sources:
         LOGGER.debug(f"{source=}")
         src = source.expanduser().resolve()
