@@ -8,9 +8,7 @@ import supervision as sv
 from collections import Counter
 from mist import dump, erosion, merging, tiling
 from mist.instances import Instance
-from mist.utils import read_image_file
 from mist.visualizing import Tile as VisualTile
-from pathlib import Path
 from pydantic import BaseModel
 from typing import Callable, Any
 
@@ -41,7 +39,7 @@ class Result(BaseModel, arbitrary_types_allowed=True):
 
 
 def run(
-    src: Path,
+    img: npt.NDArray[np.uint8],
     model: Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections],
     class_names: list[str],
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
@@ -54,7 +52,7 @@ def run(
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
 ) -> Result:
-    logger.debug(f"{src=}")
+    logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
     logger.debug(f"{dump_masks=}")
     logger.debug(f"{erosion=}")
@@ -64,18 +62,15 @@ def run(
     logger.debug(f"{parameters=}")
     logger.debug(f"{tile_height=}")
     logger.debug(f"{tile_width=}")
-    logger.info("Reading image file...")
-    original_img = read_image_file(src)
-    logger.info("Reading image file...DONE")
-    original_shape: tuple[int, ...] = original_img.shape
-    orig_height, orig_width, *_ = original_shape
+    img_shape: tuple[int, ...] = img.shape
+    orig_height, orig_width, *_ = img_shape
     logger.debug(f"{orig_height=}")
     logger.debug(f"{orig_width=}")
     orig_size = (orig_width, orig_height)
     logger.debug(f"{orig_size=}")
     logger.info("Creating tiles...")
     tiles = tiling.run(
-        original_img,
+        img,
         tile_size=(tile_width, tile_height),
         overlap=(overlap_width, overlap_height),
     )
@@ -129,7 +124,7 @@ def run(
     return Result(
         class_names=class_names,
         instances=instances,
-        original_image=original_img,
+        original_image=img,
         stats=Stats(
             merged=Counter(instance_class_names), unmerged=Counter(all_class_names)
         ),
