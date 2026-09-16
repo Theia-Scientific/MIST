@@ -11,11 +11,9 @@ from mist.detecting import run
 from mist.dump import MaskConfiguration
 from mist.erosion import Configuration as ErosionConfiguration
 from pathlib import Path
-from typing import Any, Callable, TypeAlias
+from typing import Callable, TypeAlias
 
-Model: TypeAlias = tuple[
-    Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections], list[str]
-]
+Model: TypeAlias = tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]
 
 
 @pytest.fixture
