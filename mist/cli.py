@@ -244,6 +244,7 @@ def main(
         dst = Path(os.getcwd())
     else:
         dst = output
+    LOGGER.debug(f"{dst=}")
     results: list[dict[str, Any]] = []
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
