@@ -187,30 +187,36 @@ def main(
             ),
         ),
     ] = detecting.DEFAULT_OVERLAP_HEIGHT,
-    overlap_width: Annotated[float, typer.Option(
-        help=(
-            "The amount of overlap in the X direction as a ratio between 0.0 "
-            "and 1.0."
+    overlap_width: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "The amount of overlap in the X direction as a ratio between 0.0 "
+                "and 1.0."
+            ),
         ),
-    )] = detecting.DEFAULT_OVERLAP_WIDTH,,
-    tile_height: Annotated[int, typer.Option(
-         help="The height of a tile in pixels."
-    )] = detecting.DEFAULT_TILE_HEIGHT,
-    tile_width: Annotated[int, typer.Option(
-         help="The width of a tile in pixels."
-    )] = detecting.DEFAULT_TILE_WIDTH,
-    verbose: Annotated[int, typer.Option(
-        "--verbose",
-        "-v",
-        help="Print debugging statements to STDOUT.",
-        count=True
-    )] = 0,
-    version: Annotated[bool | None, typer.Option(
-        "--version",
-        help="Prints the version to STDOUT",
-        callback=version_callback,
-        is_eager=True,
-    )] = None,
+    ] = detecting.DEFAULT_OVERLAP_WIDTH,
+    tile_height: Annotated[
+        int, typer.Option(help="The height of a tile in pixels.")
+    ] = detecting.DEFAULT_TILE_HEIGHT,
+    tile_width: Annotated[
+        int, typer.Option(help="The width of a tile in pixels.")
+    ] = detecting.DEFAULT_TILE_WIDTH,
+    verbose: Annotated[
+        int,
+        typer.Option(
+            "--verbose", "-v", help="Print debugging statements to STDOUT.", count=True
+        ),
+    ] = 0,
+    version: Annotated[
+        bool | None,
+        typer.Option(
+            "--version",
+            help="Prints the version to STDOUT",
+            callback=version_callback,
+            is_eager=True,
+        ),
+    ] = None,
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"{version=}")
@@ -218,18 +224,20 @@ def main(
 
     def predict(image: np.ndarray, parameters: dict[str, Any]) -> sv.Detections:
         return sv.Detections.from_ultralytics(
-            list(model(
-                image,
-                agnostic_nms=parameters.get("agnostic_nms", False),
-                device=parameters.get("device", "cuda:0"),
-                classes=parameters.get("classes", None),
-                conf=parameters.get("confidence", 0.35),
-                imgsz=parameters.get("image_size", 640),
-                iou=parameters.get("iou", 0.7),
-                max_det=parameters.get("maximum_detections", 1000),
-                retina_masks=parameters.get("retina_masks", True),
-                verbose=parameters.get("verbose", False),
-            ))[0]
+            list(
+                model(
+                    image,
+                    agnostic_nms=parameters.get("agnostic_nms", False),
+                    device=parameters.get("device", "cuda:0"),
+                    classes=parameters.get("classes", None),
+                    conf=parameters.get("confidence", 0.35),
+                    imgsz=parameters.get("image_size", 640),
+                    iou=parameters.get("iou", 0.7),
+                    max_det=parameters.get("maximum_detections", 1000),
+                    retina_masks=parameters.get("retina_masks", True),
+                    verbose=parameters.get("verbose", False),
+                )
+            )[0]
         )
 
     if output is None:
