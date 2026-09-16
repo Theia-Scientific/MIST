@@ -17,7 +17,7 @@ class Tile(BaseModel, arbitrary_types_allowed=True):
 
 
 def run(
-    src_img: np.ndarray,
+    src_img: npt.NDArray[np.uint8],
     logger: logging.Logger = LOGGER,
     tile_size: tuple[int, int] = (640, 640),
     overlap: tuple[float, float] = (0.2, 0.2),
