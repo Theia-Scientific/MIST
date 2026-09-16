@@ -36,7 +36,7 @@ def count_channels(img: npt.NDArray[np.uint8]) -> int:
 
 
 def correct_cv_image(
-    src: npt.NDArray[np.uint8 | np.uint16],
+    src: npt.NDArray[np.uint8 | np.uint16 | np.float32],
     supported_bit_depth: int = 255,
     logger: logging.Logger = LOGGER,
 ) -> npt.NDArray[np.uint8]:
