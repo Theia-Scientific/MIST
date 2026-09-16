@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 
 import importlib.metadata
-import json
 import logging
 import numpy as np
 import os
 import supervision as sv
-import sys
 import tempfile
 import typer
 import zipfile
@@ -245,11 +243,12 @@ def main(
     else:
         dst = output
     LOGGER.debug(f"{dst=}")
-    results: list[dict[str, Any]] = []
+    os.makedirs(dst, exist_ok=True)
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
-        result = detecting.run(
-            utils.read_image_file(src),
+        src_img = utils.read_image_file(src)
+        detections = detecting.run(
+            src_img,
             predict,
             class_names=[name for _, name in sorted(model.names.items())],
             dump_masks=dump.MaskConfiguration(
@@ -280,13 +279,12 @@ def main(
             },
         )
         LOGGER.info("Detecting...DONE")
-        results.append(Result(source=str(src), stats=result.stats).model_dump())
         LOGGER.info("Saving...")
-        # TODO: Add annotating with Supervision
+        annotator = sv.MaskAnnotator()
+        annotated_image = annotator.annotate(src_img, detections)
+
         # TODO: Save to disk
         LOGGER.info("Saving...DONE")
-
-    json.dump(results, sys.stdout)
 
 
 if __name__ == "__main__":
