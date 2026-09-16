@@ -125,21 +125,17 @@ def test_app_version():
 
 
 def test_app_image(blank_png: Path, weights_file: Path):
-    result = runner.invoke(
-        app, ["--device=cpu", "--no-show", str(weights_file), str(blank_png)]
-    )
+    result = runner.invoke(app, ["--device=cpu", str(weights_file), str(blank_png)])
     assert result.exit_code == 0
 
 
 def test_app_directory(dir_with_images: Path, weights_file: Path):
     result = runner.invoke(
-        app, ["--device=cpu", "--no-show", str(weights_file), str(dir_with_images)]
+        app, ["--device=cpu", str(weights_file), str(dir_with_images)]
     )
     assert result.exit_code == 0
 
 
 def test_app_zip(zip_file: Path, weights_file: Path):
-    result = runner.invoke(
-        app, ["--device=cpu", "--no-show", str(weights_file), str(zip_file)]
-    )
+    result = runner.invoke(app, ["--device=cpu", str(weights_file), str(zip_file)])
     assert result.exit_code == 0
