@@ -10,4 +10,4 @@ class Instance(BaseModel, arbitrary_types_allowed=True):
     box: list[int]
     class_index: int
     id: int
-    mask: npt.NDArray[np.uint8]
+    mask: npt.NDArray[np.bool]
