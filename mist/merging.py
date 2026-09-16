@@ -102,7 +102,7 @@ def run(
                     box=[x, y, x + w, y + h],
                     class_index=cls_index_int,
                     id=instance_id,
-                    mask=instance_mask,
+                    mask=instance_mask.astype(np.bool),
                 )
                 instances.append(instance)
                 instance_id += 1
