@@ -8,7 +8,6 @@ import supervision as sv
 from collections import Counter
 from mist import dump, erosion, merging, tiling
 from mist.instances import Instance
-from mist.visualizing import Tile as VisualTile
 from pydantic import BaseModel
 from typing import Callable, Any
 
@@ -35,7 +34,6 @@ class Result(BaseModel, arbitrary_types_allowed=True):
     instances: list[Instance]
     original_image: npt.NDArray[np.uint8]
     stats: Stats
-    visual_tiles: list[VisualTile]
 
 
 def run(
@@ -77,7 +75,6 @@ def run(
     logger.info("Creating tiles...DONE")
     masks: list[merging.Mask] = []
     class_indices: list[int] = []
-    visual_tiles: list[VisualTile] = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
         detections = model(tile.img, parameters)
@@ -98,14 +95,6 @@ def run(
             ]
         )
         logger.info(f"Running inference on {index} tile...DONE")
-        visual_tiles.append(
-            VisualTile(
-                x_min=tile.x_start,
-                y_min=tile.y_start,
-                x_max=tile.x_start + tile_width,
-                y_max=tile.y_start + tile_height,
-            )
-        )
     logger.info("Merging results...")
     instances = merging.run(
         class_indices,
@@ -128,5 +117,4 @@ def run(
         stats=Stats(
             merged=Counter(instance_class_names), unmerged=Counter(all_class_names)
         ),
-        visual_tiles=visual_tiles,
     )
