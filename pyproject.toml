@@ -1,3 +1,7 @@
+[build-system]
+requires = [ "hatchling" ]
+build-backend = "hatchling.build"
+
 [project]
 name = "mist"
 version = "0.1.0"
@@ -31,10 +35,6 @@ dependencies = [
     "supervision>=0.30",
     "tifffile",
 ]
-
-[build-system]
-requires = [ "hatchling" ]
-build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 dev = [
