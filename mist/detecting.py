@@ -7,9 +7,11 @@ import supervision as sv
 
 from collections import Counter
 from mist import dump, erosion, merging, tiling
-from mist.instances import Instance
 from pydantic import BaseModel
+from supervision.config import CLASS_NAME_DATA_FIELD
 from typing import Callable, Any
+
+LOGGER: logging.Logger = logging.getLogger(__name__)
 
 DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
 DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
@@ -20,20 +22,13 @@ DEFAULT_PARAMETERS: dict[str, Any] = {}
 DEFAULT_SHOW_TILES: bool = False
 DEFAULT_TILE_HEIGHT: int = 640
 DEFAULT_TILE_WIDTH: int = 640
-
-LOGGER: logging.Logger = logging.getLogger(__name__)
+INSTANCE_ID_DATA_FIELD: str = "instance_id"
+STATS_METADATA_FIELD: str = "stats"
 
 
 class Stats(BaseModel):
     merged: Counter[str]
     unmerged: Counter[str]
-
-
-class Result(BaseModel, arbitrary_types_allowed=True):
-    class_names: list[str]
-    instances: list[Instance]
-    original_image: npt.NDArray[np.uint8]
-    stats: Stats
 
 
 def run(
@@ -49,7 +44,7 @@ def run(
     parameters: dict[str, Any] = DEFAULT_PARAMETERS,
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
-) -> Result:
+) -> sv.Detections:
     logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
     logger.debug(f"{dump_masks=}")
@@ -110,11 +105,19 @@ def run(
     logger.debug(f"{all_class_names=}")
     instance_class_names = [class_names[i.class_index] for i in instances]
     logger.debug(f"{instance_class_names=}")
-    return Result(
-        class_names=class_names,
-        instances=instances,
-        original_image=img,
-        stats=Stats(
-            merged=Counter(instance_class_names), unmerged=Counter(all_class_names)
-        ),
+    return sv.Detections(
+        class_id=None,
+        confidence=None,
+        data={
+            CLASS_NAME_DATA_FIELD: np.array(instance_class_names),
+            INSTANCE_ID_DATA_FIELD: np.array([instance.id for instance in instances]),
+        },
+        mask=np.array([instance.mask for instance in instances]),
+        metadata={
+            STATS_METADATA_FIELD: Stats(
+                merged=Counter(instance_class_names), unmerged=Counter(all_class_names)
+            ).model_dump()
+        },
+        tracker_id=None,
+        xyxy=np.array([np.array(instance.box) for instance in instances]),
     )
