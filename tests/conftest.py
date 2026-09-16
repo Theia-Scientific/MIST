@@ -7,7 +7,7 @@ import pytest
 import supervision as sv
 
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 from ultralytics.models import YOLO
 from ultralytics.utils.downloads import attempt_download_asset, download
 
@@ -68,26 +68,24 @@ def blank_tif(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
 @pytest.fixture(scope="session")
 def model(
     weights_file: Path,
-) -> tuple[Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections], list[str]]:
+) -> tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]:
     model = YOLO(weights_file)
     class_names = [name for _, name in sorted(model.names.items())]
 
-    def predict(
-        image: npt.NDArray[np.uint8], parameters: dict[str, Any]
-    ) -> sv.Detections:
+    def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         return sv.Detections.from_ultralytics(
             list(
                 model(
                     image,
-                    agnostic_nms=parameters.get("agnostic_nms", False),
-                    device=parameters.get("device", "cpu"),
-                    classes=parameters.get("classes", None),
-                    conf=parameters.get("confidence", 0.35),
-                    imgsz=parameters.get("image_size", 640),
-                    iou=parameters.get("iou", 0.7),
-                    max_det=parameters.get("maximum_detections", 1000),
-                    retina_masks=parameters.get("retina_masks", True),
-                    verbose=parameters.get("verbose", False),
+                    agnostic_nms=False,
+                    device="cpu",
+                    classes=class_names,
+                    conf=0.35,
+                    imgsz=640,
+                    iou=0.7,
+                    max_det=1000,
+                    retina_masks=True,
+                    verbose=False,
                 )
             )[0]
         )
@@ -97,11 +95,10 @@ def model(
 
 @pytest.fixture(scope="session")
 def empty_detections() -> (
-    tuple[Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections], list[str]]
+    tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]
 ):
-    def predict(image: npt.NDArray[np.uint8], parameters: dict[str, Any]) -> sv.Detections:
+    def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         _ = image
-        _ = parameters
 
         return sv.Detections(xyxy=np.array([[0, 0, 100, 100]]))
 
