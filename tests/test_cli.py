@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import cv2
 import importlib.metadata
 import os
 import pytest
@@ -172,3 +173,20 @@ def test_app_zip(zip_file: Path, tmp_path: Path, weights_file: Path):
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(zip_file)],
     )
     assert result.exit_code == 0
+
+
+def test_app_fail_to_save_image(
+    bus_jpg: Path, mocker: MockerFixture, tmp_path: Path, weights_file: Path
+):
+    def mock_cv2_imwrite(dst: str, img: cv2.typing.MatLike) -> bool:
+        _ = dst
+        _ = img
+        return False
+
+    _ = mocker.patch("cv2.imwrite", mock_cv2_imwrite)
+    result = runner.invoke(
+        app,
+        ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(bus_jpg)],
+    )
+    assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 0
