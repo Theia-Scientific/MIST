@@ -61,8 +61,8 @@ def run(
     logger.info("Creating tiles...")
     tiles = tiling.run(
         img,
-        tile_size=(tile_width, tile_height),
         overlap=(overlap_width, overlap_height),
+        tile_size=(tile_width, tile_height),
     )
     logger.info("Creating tiles...DONE")
     masks: list[merging.Mask] = []
