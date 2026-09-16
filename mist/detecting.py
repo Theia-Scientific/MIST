@@ -9,7 +9,7 @@ from collections import Counter
 from mist import dump, erosion, merging, tiling
 from pydantic import BaseModel
 from supervision.config import CLASS_NAME_DATA_FIELD
-from typing import Callable, Any
+from typing import Callable
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
@@ -18,7 +18,6 @@ DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
 DEFAULT_OVERLAP_WIDTH: float = 0.2
-DEFAULT_PARAMETERS: dict[str, Any] = {}
 DEFAULT_SHOW_TILES: bool = False
 DEFAULT_TILE_HEIGHT: int = 640
 DEFAULT_TILE_WIDTH: int = 640
@@ -33,7 +32,7 @@ class Stats(BaseModel):
 
 def run(
     img: npt.NDArray[np.uint8],
-    model: Callable[[npt.NDArray[np.uint8], dict[str, Any]], sv.Detections],
+    model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
     class_names: list[str],
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
     erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
@@ -41,7 +40,6 @@ def run(
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
-    parameters: dict[str, Any] = DEFAULT_PARAMETERS,
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
 ) -> sv.Detections:
@@ -52,7 +50,6 @@ def run(
     logger.debug(f"{merge_classes=}")
     logger.debug(f"{overlap_height=}")
     logger.debug(f"{overlap_width=}")
-    logger.debug(f"{parameters=}")
     logger.debug(f"{tile_height=}")
     logger.debug(f"{tile_width=}")
     img_shape: tuple[int, ...] = img.shape
@@ -72,11 +69,11 @@ def run(
     class_indices: list[int] = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
-        detections = model(tile.img, parameters)
+        detections = model(tile.img)
         if detections.class_id is None:
             class_indices.extend([0 for _ in range(len(detections))])
         else:
-            class_indices.extend(detections.class_id.tolist())
+            class_indices.extend(list(detections.class_id))
         if detections.mask is None:
             masks_data = np.zeros(
                 (len(detections), tile_height, tile_width), dtype=bool
