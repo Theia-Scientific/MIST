@@ -3,33 +3,37 @@
 import cv2
 import numpy as np
 import numpy.typing as npt
+import os
 import pytest
 import supervision as sv
 
 from pathlib import Path
+from supervision.config import CLASS_NAME_DATA_FIELD
 from typing import Callable
-from ultralytics.models import YOLO
-from ultralytics.utils.downloads import attempt_download_asset, download
 
 
-@pytest.fixture(scope="session")
-def assets(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    return tmp_path_factory.mktemp("assets")
+@pytest.fixture
+def tmp_assets() -> Path:
+    cwd = Path(os.getcwd())
+    assets = cwd.joinpath(".tmp", "tests", "assets")
+    if not assets.exists():
+        os.makedirs(assets, exist_ok=True)
+    return assets
 
 
-@pytest.fixture(scope="session")
-def weights_file(assets: Path) -> Path:
-    weights_file = attempt_download_asset(
-        "weights/yolov8n-seg.pt", dir=assets, progress=False
-    )
-    return assets.joinpath(weights_file)
+@pytest.fixture
+def assets() -> Path:
+    return Path(os.getcwd()).joinpath("tests", "assets")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def bus_jpg(assets: Path) -> Path:
-    bus_jpg = "bus.jpg"
-    download(f"https://www.ultralytics.com/images/{bus_jpg}", dir=assets)
-    return assets.joinpath(bus_jpg)
+    return assets.joinpath("bus.jpg")
+
+
+@pytest.fixture
+def bus_txt(assets: Path) -> Path:
+    return assets.joinpath("bus.txt")
 
 
 @pytest.fixture
@@ -65,40 +69,71 @@ def blank_tif(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
     return tif_file
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def model(
-    weights_file: Path,
+    bus_txt: Path,
 ) -> tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]:
-    model = YOLO(weights_file)
-    class_names = [name for _, name in sorted(model.names.items())]
+    class_names = [
+        "bus",
+        "cat",
+        "dog",
+        "horse",
+        "bird",
+        "car",
+        "cellphone",
+        "tv",
+        "clock",
+        "person",
+    ]
+
+    with open(bus_txt, "r") as txt:
+        masks: list[npt.NDArray[np.uint8]] = []
+        class_ids: list[int] = []
+        for line in txt:
+            current_line = line.strip()
+            data = current_line.split(" ")
+            class_ids.append(int(data.pop(0)))
+            polygon = np.array(
+                [
+                    [
+                        int(float(x) * int(640)),
+                        int(float(y) * int(640)),
+                    ]
+                    for x, y in zip(data[0::2], data[1::2])
+                ]
+            )
+            masks.append(sv.polygon_to_mask(polygon, resolution_wh=(640, 640)))
+    mask = np.array([mask.astype(np.bool) for mask in masks])
 
     def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
-        return sv.Detections.from_ultralytics(
-            list(
-                model(
-                    image,
-                    agnostic_nms=False,
-                    device="cpu",
-                    conf=0.35,
-                    imgsz=640,
-                    iou=0.7,
-                    max_det=1000,
-                    retina_masks=True,
-                    verbose=False,
-                )
-            )[0]
+        _ = image
+
+        return sv.Detections(
+            class_id=np.array(class_ids),
+            confidence=None,
+            data={
+                CLASS_NAME_DATA_FIELD: np.array(
+                    [class_names[class_id] for class_id in class_ids]
+                ),
+            },
+            mask=mask,
+            tracker_id=None,
+            xyxy=sv.mask_to_xyxy(mask),
         )
 
     return predict, class_names
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def empty_detections() -> (
     tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]
 ):
     def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         _ = image
 
-        return sv.Detections.empty()
+        detections = sv.Detections.empty()
+        detections.class_id = None
+        assert detections.class_id is None
+        return detections
 
     return predict, ["object"]

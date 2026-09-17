@@ -29,8 +29,10 @@ def test_run(bus_image: npt.NDArray[np.uint8], model: Model):
     assert detections is not None
 
 
-def test_run_with_no_predictions(blank_image: npt.NDArray[np.uint8], model: Model):
-    predict, class_names = model
+def test_run_with_no_predictions(
+    blank_image: npt.NDArray[np.uint8], empty_detections: Model
+):
+    predict, class_names = empty_detections
     detections = run(blank_image, predict, class_names)
     assert detections.is_empty()
 
