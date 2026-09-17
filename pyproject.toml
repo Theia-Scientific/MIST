@@ -43,6 +43,7 @@ dev = [
     "flake8",
     "hatch",
     "isort",
+    "mist[cli]",
     "pytest",
     "pytest-cov",
     "pytest-mock",
