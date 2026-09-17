@@ -42,7 +42,7 @@ def run(
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
-) -> sv.Detections | None:
+) -> sv.Detections:
     logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
     logger.debug(f"{dump_masks=}")
@@ -123,4 +123,4 @@ def run(
             xyxy=np.array([np.array(instance.box) for instance in instances]),
         )
     else:
-        return None
+        return sv.Detections.empty()

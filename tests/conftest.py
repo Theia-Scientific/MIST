@@ -99,6 +99,6 @@ def empty_detections() -> (
     def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         _ = image
 
-        return sv.Detections(xyxy=np.array([[0, 0, 100, 100]]))
+        return sv.Detections.empty()
 
     return predict, ["object"]
