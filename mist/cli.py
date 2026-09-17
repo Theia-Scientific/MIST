@@ -273,7 +273,7 @@ def main(
             logger=LOGGER,
         )
         LOGGER.info("Detecting...DONE")
-        if detections is None:
+        if detections.is_empty():
             LOGGER.warning(f"No detections for the '{src}' image file")
         else:
             LOGGER.info("Saving...")
