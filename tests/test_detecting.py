@@ -32,7 +32,7 @@ def test_run(bus_image: npt.NDArray[np.uint8], model: Model):
 def test_run_with_no_predictions(blank_image: npt.NDArray[np.uint8], model: Model):
     predict, class_names = model
     detections = run(blank_image, predict, class_names)
-    assert detections is None
+    assert detections.is_empty()
 
 
 def test_run_with_erosion(bus_image: npt.NDArray[np.uint8], model: Model):
