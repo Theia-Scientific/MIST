@@ -70,6 +70,11 @@ def blank_tif(blank_image: npt.NDArray[np.uint8], tmp_path: Path) -> Path:
 
 
 @pytest.fixture
+def weights_file() -> str:
+    return "yolo26n-seg.pt"
+
+
+@pytest.fixture
 def model(
     bus_txt: Path,
 ) -> tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]:
