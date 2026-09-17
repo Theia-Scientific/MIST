@@ -65,4 +65,4 @@ def test_run_with_dump_masks(
 def test_empty_detections(blank_image: npt.NDArray[np.uint8], empty_detections: Model):
     predict, class_names = empty_detections
     detections = run(blank_image, predict, class_names)
-    assert detections is None
+    assert detections.is_empty()
