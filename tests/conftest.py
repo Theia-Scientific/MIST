@@ -13,15 +13,6 @@ from typing import Callable
 
 
 @pytest.fixture
-def tmp_assets() -> Path:
-    cwd = Path(os.getcwd())
-    assets = cwd.joinpath(".tmp", "tests", "assets")
-    if not assets.exists():
-        os.makedirs(assets, exist_ok=True)
-    return assets
-
-
-@pytest.fixture
 def assets() -> Path:
     return Path(os.getcwd()).joinpath("tests", "assets")
 
