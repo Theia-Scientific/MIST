@@ -42,3 +42,5 @@ venv/
 *.jpg
 *.pt
 *.zip
+
+!tests/assets/*.jpg
