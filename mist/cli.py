@@ -9,6 +9,7 @@ import os
 import supervision as sv
 import tempfile
 import typer
+import ultralytics
 import zipfile
 
 from mist import __app_name__, detecting, dump, erosion, utils
@@ -16,7 +17,6 @@ from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
 from typing import Annotated
-from ultralytics.models import YOLO
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 PREFIX: str = f"{__app_name__.upper()}"
@@ -220,7 +220,7 @@ def main(
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"{version=}")
-    model = YOLO(weights_file)
+    model = ultralytics.YOLO(weights_file)
 
     def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         return sv.Detections.from_ultralytics(

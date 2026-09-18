@@ -16,6 +16,7 @@ from mist.cli import (
 from pathlib import Path
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
+from ultralytics import YOLO
 
 runner = CliRunner()
 
@@ -127,7 +128,13 @@ def test_app_version():
     assert f"{__app_name__} {version}" in result.stdout
 
 
-def test_app_image(blank_png: Path, tmp_path: Path, weights_file: Path):
+def test_app_image(
+    blank_png: Path,
+    tmp_path: Path,
+    weights_file: Path,
+    yolo: YOLO,
+):
+    _ = yolo
     result = runner.invoke(
         app,
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(blank_png)],

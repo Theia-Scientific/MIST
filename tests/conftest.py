@@ -6,10 +6,14 @@ import numpy.typing as npt
 import os
 import pytest
 import supervision as sv
+import torch
 
 from pathlib import Path
+from pytest_mock import MockerFixture
 from supervision.config import CLASS_NAME_DATA_FIELD
 from typing import Callable
+from ultralytics.models import YOLO
+from ultralytics.engine.results import Results
 
 
 @pytest.fixture
@@ -66,8 +70,77 @@ def weights_file() -> str:
 
 
 @pytest.fixture
+def bus_class_ids(bus_txt: Path) -> list[int]:
+    with open(bus_txt, "r") as txt:
+        return [int(line.strip().split(" ").pop(0)) for line in txt]
+
+
+@pytest.fixture
+def bus_image(bus_jpg: Path) -> npt.NDArray[np.uint8]:
+    img = cv2.imread(bus_jpg)
+    assert img is not None
+    return np.asarray(img, dtype=np.uint8)
+
+
+@pytest.fixture
+def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
+    with open(bus_txt, "r") as txt:
+        masks: list[npt.NDArray[np.uint8]] = []
+        for line in txt:
+            current_line = line.strip()
+            data = current_line.split(" ")
+            data.pop(0)
+            polygon = np.array(
+                [
+                    [
+                        int(float(x) * int(640)),
+                        int(float(y) * int(640)),
+                    ]
+                    for x, y in zip(data[0::2], data[1::2])
+                ]
+            )
+            masks.append(sv.polygon_to_mask(polygon, resolution_wh=(640, 640)))
+    return np.array([mask.astype(np.bool) for mask in masks])
+
+
+@pytest.fixture
+def yolo(
+    bus_class_ids: list[int],
+    bus_image: npt.NDArray[np.uint8],
+    bus_jpg: Path,
+    bus_masks: npt.NDArray[np.bool],
+    mocker: MockerFixture,
+) -> YOLO:
+    boxes = torch.tensor(
+        [
+            [box[0], box[1], box[2], box[3], 0.9, class_id]
+            for box, class_id in zip(sv.mask_to_xyxy(bus_masks), bus_class_ids)
+        ]
+    )
+    names = {0: "bus", 9: "person"}
+    results = Results(
+        bus_image,
+        str(bus_jpg),
+        names,
+        boxes=boxes,
+        masks=torch.tensor(bus_masks),
+        probs=None,
+        obb=None,
+        speed=None,
+        semantic_mask=None,
+        depth=None,
+    )
+
+    yolo = mocker.MagicMock(spec=YOLO)
+    yolo.names = names
+    yolo.return_value = [results]
+
+    return mocker.patch("ultralytics.YOLO", yolo)
+
+
+@pytest.fixture
 def model(
-    bus_txt: Path,
+    bus_class_ids: list[int], bus_mask: npt.NDArray[np.bool]
 ) -> tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]:
     class_names = [
         "bus",
@@ -82,39 +155,20 @@ def model(
         "person",
     ]
 
-    with open(bus_txt, "r") as txt:
-        masks: list[npt.NDArray[np.uint8]] = []
-        class_ids: list[int] = []
-        for line in txt:
-            current_line = line.strip()
-            data = current_line.split(" ")
-            class_ids.append(int(data.pop(0)))
-            polygon = np.array(
-                [
-                    [
-                        int(float(x) * int(640)),
-                        int(float(y) * int(640)),
-                    ]
-                    for x, y in zip(data[0::2], data[1::2])
-                ]
-            )
-            masks.append(sv.polygon_to_mask(polygon, resolution_wh=(640, 640)))
-    mask = np.array([mask.astype(np.bool) for mask in masks])
-
     def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         _ = image
 
         return sv.Detections(
-            class_id=np.array(class_ids),
+            class_id=np.array(bus_class_ids),
             confidence=None,
             data={
                 CLASS_NAME_DATA_FIELD: np.array(
-                    [class_names[class_id] for class_id in class_ids]
+                    [class_names[class_id] for class_id in bus_class_ids]
                 ),
             },
-            mask=mask,
+            mask=bus_mask,
             tracker_id=None,
-            xyxy=sv.mask_to_xyxy(mask),
+            xyxy=sv.mask_to_xyxy(bus_mask),
         )
 
     return predict, class_names

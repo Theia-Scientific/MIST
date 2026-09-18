@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 
-import cv2
 import numpy as np
 import numpy.typing as npt
 import os
-import pytest
 import supervision as sv
 
 from mist.detecting import run
@@ -14,13 +12,6 @@ from pathlib import Path
 from typing import Callable, TypeAlias
 
 Model: TypeAlias = tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]
-
-
-@pytest.fixture
-def bus_image(bus_jpg: Path) -> npt.NDArray[np.uint8]:
-    img = cv2.imread(bus_jpg)
-    assert img is not None
-    return np.asarray(img, dtype=np.uint8)
 
 
 def test_run(bus_image: npt.NDArray[np.uint8], model: Model):
