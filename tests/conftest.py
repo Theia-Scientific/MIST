@@ -140,7 +140,7 @@ def yolo(
 
 @pytest.fixture
 def model(
-    bus_class_ids: list[int], bus_mask: npt.NDArray[np.bool]
+    bus_class_ids: list[int], bus_masks: npt.NDArray[np.bool]
 ) -> tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]:
     class_names = [
         "bus",
@@ -166,9 +166,9 @@ def model(
                     [class_names[class_id] for class_id in bus_class_ids]
                 ),
             },
-            mask=bus_mask,
+            mask=bus_masks,
             tracker_id=None,
-            xyxy=sv.mask_to_xyxy(bus_mask),
+            xyxy=sv.mask_to_xyxy(bus_masks),
         )
 
     return predict, class_names
