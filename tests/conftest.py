@@ -7,12 +7,12 @@ import os
 import pytest
 import supervision as sv
 import torch
+import ultralytics
 
 from pathlib import Path
 from pytest_mock import MockerFixture
 from supervision.config import CLASS_NAME_DATA_FIELD
 from typing import Callable
-from ultralytics.models import YOLO
 from ultralytics.engine.results import Results
 
 
@@ -110,14 +110,26 @@ def yolo(
     bus_jpg: Path,
     bus_masks: npt.NDArray[np.bool],
     mocker: MockerFixture,
-) -> YOLO:
+) -> ultralytics.YOLO:
     boxes = torch.tensor(
         [
             [box[0], box[1], box[2], box[3], 0.9, class_id]
             for box, class_id in zip(sv.mask_to_xyxy(bus_masks), bus_class_ids)
         ]
     )
-    names = {0: "bus", 9: "person"}
+    class_names = [
+        "bus",
+        "cat",
+        "dog",
+        "horse",
+        "bird",
+        "car",
+        "cellphone",
+        "tv",
+        "clock",
+        "person",
+    ]
+    names = {index: name for index, name in enumerate(class_names)}
     results = Results(
         bus_image,
         str(bus_jpg),
@@ -131,11 +143,12 @@ def yolo(
         depth=None,
     )
 
-    yolo = mocker.MagicMock(spec=YOLO)
-    yolo.names = names
-    yolo.return_value = [results]
-
-    return mocker.patch("ultralytics.YOLO", yolo)
+    m = mocker.MagicMock(spec=ultralytics.YOLO)
+    mock_names = mocker.PropertyMock(return_value=names)
+    type(m).names = mock_names
+    assert hasattr(m, "names")
+    assert m.names == names
+    return m
 
 
 @pytest.fixture

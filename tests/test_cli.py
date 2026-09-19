@@ -2,9 +2,14 @@
 
 import cv2
 import importlib.metadata
+import numpy as np
+import numpy.typing as npt
 import os
 import pytest
 import shutil
+import supervision as sv
+import torch
+import ultralytics
 import zipfile
 
 from mist import __app_name__
@@ -16,7 +21,8 @@ from mist.cli import (
 from pathlib import Path
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
-from ultralytics import YOLO
+from typing import Any, Iterator
+from ultralytics.engine.results import Results
 
 runner = CliRunner()
 
@@ -129,17 +135,87 @@ def test_app_version():
 
 
 def test_app_image(
-    blank_png: Path,
+    bus_class_ids: list[int],
+    bus_image: npt.NDArray[np.uint8],
+    bus_jpg: Path,
+    bus_masks: npt.NDArray[np.bool],
+    mocker: MockerFixture,
     tmp_path: Path,
     weights_file: Path,
-    yolo: YOLO,
+    yolo: ultralytics.YOLO,
 ):
-    _ = yolo
-    result = runner.invoke(
-        app,
-        ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(blank_png)],
+    boxes = torch.tensor(
+        [
+            [box[0], box[1], box[2], box[3], 0.9, class_id]
+            for box, class_id in zip(sv.mask_to_xyxy(bus_masks), bus_class_ids)
+        ]
     )
-    assert result.exit_code == 0
+    class_names = [
+        "bus",
+        "cat",
+        "dog",
+        "horse",
+        "bird",
+        "car",
+        "cellphone",
+        "tv",
+        "clock",
+        "person",
+    ]
+    names = {index: name for index, name in enumerate(class_names)}
+    results = [
+        Results(
+            bus_image,
+            str(bus_jpg),
+            names,
+            boxes=boxes,
+            masks=torch.tensor(bus_masks),
+            probs=None,
+            obb=None,
+            speed=None,
+            semantic_mask=None,
+            depth=None,
+        )
+    ]
+
+    mock_names = mocker.patch(
+        "ultralytics.YOLO.names", new_callable=mocker.PropertyMock
+    )
+    mock_names.return_value = names
+
+    def mock_init(
+        self, model: str | Path, task: str | None = None, verbose: bool = False
+    ) -> None:
+        _ = self
+        _ = model
+        _ = task
+        _ = verbose
+
+    def mock_call(
+        self,
+        source: npt.NDArray[np.uint8],
+        stream: bool = False,
+        **kwargs: Any,
+    ) -> Iterator[Results | torch.Tensor] | list[Results] | list[torch.Tensor]:
+        _ = self
+        _ = source
+        _ = stream
+        _ = kwargs
+        return results
+
+    mocker.patch.object(ultralytics.YOLO, "__init__", mock_init)
+    mocker.patch.object(ultralytics.YOLO, "__call__", mock_call)
+    yolo = ultralytics.YOLO("yolo26n-seg.pt")
+    assert hasattr(yolo, "names")
+    assert yolo.names == names
+    actual = yolo(bus_image)
+    assert isinstance(actual, list)
+    assert actual == results
+    # result = runner.invoke(
+    #     app,
+    #     ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(blank_png)],
+    # )
+    # assert result.exit_code == 0
 
 
 def test_app_no_output(
