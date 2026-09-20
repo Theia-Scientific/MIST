@@ -2,6 +2,7 @@
 
 import cv2
 import importlib.metadata
+import logging
 import numpy as np
 import numpy.typing as npt
 import os
@@ -12,7 +13,7 @@ import torch
 import ultralytics
 import zipfile
 
-from mist import __app_name__
+from mist import __app_name__, dump, erosion
 from mist.cli import (
     app,
     expand_sources,
@@ -21,7 +22,7 @@ from mist.cli import (
 from pathlib import Path
 from pytest_mock import MockerFixture
 from typer.testing import CliRunner
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 from ultralytics.engine.results import Results
 
 runner = CliRunner()
@@ -142,7 +143,6 @@ def test_app_image(
     mocker: MockerFixture,
     tmp_path: Path,
     weights_file: Path,
-    yolo: ultralytics.YOLO,
 ):
     boxes = torch.tensor(
         [
@@ -211,11 +211,41 @@ def test_app_image(
     actual = yolo(bus_image)
     assert isinstance(actual, list)
     assert actual == results
-    # result = runner.invoke(
-    #     app,
-    #     ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(blank_png)],
-    # )
-    # assert result.exit_code == 0
+
+    def mock_detecting_run(
+        image: npt.NDArray[np.uint8],
+        model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
+        class_names: list[str],
+        dump_masks: dump.MaskConfiguration,
+        erosion: erosion.Configuration,
+        logger: logging.Logger,
+        merge_classes: list[int],
+        overlap_height: float,
+        overlap_width: float,
+        tile_height: int,
+        tile_width: int,
+    ) -> sv.Detections:
+        _ = image
+        _ = model
+        _ = class_names
+        _ = dump_masks
+        _ = erosion
+        _ = logger
+        _ = merge_classes
+        _ = overlap_height
+        _ = overlap_width
+        _ = tile_height
+        _ = tile_width
+
+        return sv.Detections.from_ultralytics(results)
+
+    mocker.patch("mist.detecting.run", mock_detecting_run)
+
+    result = runner.invoke(
+        app,
+        ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(bus_jpg)],
+    )
+    assert result.exit_code == 0
 
 
 def test_app_no_output(

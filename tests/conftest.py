@@ -6,14 +6,10 @@ import numpy.typing as npt
 import os
 import pytest
 import supervision as sv
-import torch
-import ultralytics
 
 from pathlib import Path
-from pytest_mock import MockerFixture
 from supervision.config import CLASS_NAME_DATA_FIELD
 from typing import Callable
-from ultralytics.engine.results import Results
 
 
 @pytest.fixture
@@ -83,7 +79,7 @@ def bus_image(bus_jpg: Path) -> npt.NDArray[np.uint8]:
 
 
 @pytest.fixture
-def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
+def bus_masks(bus_txt: Path) -> npt.NDArray[np.uint8]:
     mask_width_px = 640
     mask_height_px = 640
     with open(bus_txt, "r") as txt:
@@ -106,7 +102,7 @@ def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
                     polygon, resolution_wh=(mask_width_px, mask_height_px)
                 )
             )
-    return np.array([mask.astype(np.bool) for mask in masks])
+    return np.array(masks)
 
 
 @pytest.fixture
