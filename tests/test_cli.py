@@ -22,7 +22,8 @@ from pathlib import Path
 from pytest_mock import MockerFixture
 from supervision.config import CLASS_NAME_DATA_FIELD
 from typer.testing import CliRunner
-from typing import Callable
+from typing import Any, Callable
+from ultralytics.engine.results import Results
 
 runner = CliRunner()
 
@@ -183,7 +184,18 @@ def mock_yolo(
         _ = task
         _ = verbose
 
+    def mock_yolo_call(
+        self, source: npt.NDArray[np.uint8], stream: bool = False, **kwargs: Any
+    ) -> list[Results]:
+        _ = self
+        _ = source
+        _ = stream
+        _ = kwargs
+
+        return [Results(source, "", names)]
+
     _ = mocker.patch.object(ultralytics.YOLO, "__init__", mock_yolo_init)
+    _ = mocker.patch.object(ultralytics.YOLO, "__call__", mock_yolo_call)
 
 
 def test_map_verbosity():
@@ -260,6 +272,21 @@ def test_app_image(
     assert result.exit_code == 0
     assert len(os.listdir(tmp_path)) == 1
     assert tmp_path.joinpath(bus_jpg.stem + "_mist.png").exists()
+
+
+def test_app_image_yolo_no_results(
+    bus_jpg: Path,
+    mock_yolo: None,
+    tmp_path: Path,
+    weights_file: Path,
+):
+    _ = mock_yolo
+    result = runner.invoke(
+        app,
+        ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(bus_jpg)],
+    )
+    assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 0
 
 
 def test_app_no_output(
