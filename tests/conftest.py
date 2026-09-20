@@ -84,6 +84,8 @@ def bus_image(bus_jpg: Path) -> npt.NDArray[np.uint8]:
 
 @pytest.fixture
 def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
+    mask_width_px = 640
+    mask_height_px = 640
     with open(bus_txt, "r") as txt:
         masks: list[npt.NDArray[np.uint8]] = []
         for line in txt:
@@ -93,62 +95,18 @@ def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
             polygon = np.array(
                 [
                     [
-                        int(float(x) * int(640)),
-                        int(float(y) * int(640)),
+                        int(float(x) * int(mask_width_px)),
+                        int(float(y) * int(mask_height_px)),
                     ]
                     for x, y in zip(data[0::2], data[1::2])
                 ]
             )
-            masks.append(sv.polygon_to_mask(polygon, resolution_wh=(640, 640)))
+            masks.append(
+                sv.polygon_to_mask(
+                    polygon, resolution_wh=(mask_width_px, mask_height_px)
+                )
+            )
     return np.array([mask.astype(np.bool) for mask in masks])
-
-
-@pytest.fixture
-def yolo(
-    bus_class_ids: list[int],
-    bus_image: npt.NDArray[np.uint8],
-    bus_jpg: Path,
-    bus_masks: npt.NDArray[np.bool],
-    mocker: MockerFixture,
-) -> ultralytics.YOLO:
-    boxes = torch.tensor(
-        [
-            [box[0], box[1], box[2], box[3], 0.9, class_id]
-            for box, class_id in zip(sv.mask_to_xyxy(bus_masks), bus_class_ids)
-        ]
-    )
-    class_names = [
-        "bus",
-        "cat",
-        "dog",
-        "horse",
-        "bird",
-        "car",
-        "cellphone",
-        "tv",
-        "clock",
-        "person",
-    ]
-    names = {index: name for index, name in enumerate(class_names)}
-    results = Results(
-        bus_image,
-        str(bus_jpg),
-        names,
-        boxes=boxes,
-        masks=torch.tensor(bus_masks),
-        probs=None,
-        obb=None,
-        speed=None,
-        semantic_mask=None,
-        depth=None,
-    )
-
-    m = mocker.MagicMock(spec=ultralytics.YOLO)
-    mock_names = mocker.PropertyMock(return_value=names)
-    type(m).names = mock_names
-    assert hasattr(m, "names")
-    assert m.names == names
-    return m
 
 
 @pytest.fixture
