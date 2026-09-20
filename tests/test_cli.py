@@ -77,37 +77,9 @@ def dir_with_images_and_text(
 
 
 @pytest.fixture
-def mock_run(
-    bus_class_ids: list[int],
-    bus_masks: npt.NDArray[np.bool],
-    mocker: MockerFixture,
+def mock_detecting_run(
+    bus_class_ids: list[int], bus_masks: npt.NDArray[np.bool], mocker: MockerFixture
 ):
-    class_names = [
-        "bus",
-        "cat",
-        "dog",
-        "horse",
-        "bird",
-        "car",
-        "cellphone",
-        "tv",
-        "clock",
-        "person",
-    ]
-    names = {index: name for index, name in enumerate(class_names)}
-    mock_names = mocker.patch(
-        "ultralytics.YOLO.names", new_callable=mocker.PropertyMock
-    )
-    mock_names.return_value = names
-
-    def mock_yolo_init(
-        self, model: str | Path, task: str | None = None, verbose: bool = False
-    ) -> None:
-        _ = self
-        _ = model
-        _ = task
-        _ = verbose
-
     def mock_detecting_run(
         image: npt.NDArray[np.uint8],
         model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
@@ -146,8 +118,72 @@ def mock_run(
             xyxy=sv.mask_to_xyxy(bus_masks),
         )
 
-    _ = mocker.patch.object(ultralytics.YOLO, "__init__", mock_yolo_init)
     _ = mocker.patch("mist.detecting.run", mock_detecting_run)
+
+
+@pytest.fixture
+def mock_detecting_run_no_detections(mocker: MockerFixture):
+    def mock_detecting_run(
+        image: npt.NDArray[np.uint8],
+        model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
+        class_names: list[str],
+        dump_masks: dump.MaskConfiguration,
+        erosion: erosion.Configuration,
+        logger: logging.Logger,
+        merge_classes: list[int],
+        overlap_height: float,
+        overlap_width: float,
+        tile_height: int,
+        tile_width: int,
+    ) -> sv.Detections:
+        _ = image
+        _ = model
+        _ = class_names
+        _ = dump_masks
+        _ = erosion
+        _ = logger
+        _ = merge_classes
+        _ = overlap_height
+        _ = overlap_width
+        _ = tile_height
+        _ = tile_width
+
+        return sv.Detections.empty()
+
+    _ = mocker.patch("mist.detecting.run", mock_detecting_run)
+
+
+@pytest.fixture
+def mock_yolo(
+    mocker: MockerFixture,
+):
+    class_names = [
+        "bus",
+        "cat",
+        "dog",
+        "horse",
+        "bird",
+        "car",
+        "cellphone",
+        "tv",
+        "clock",
+        "person",
+    ]
+    names = {index: name for index, name in enumerate(class_names)}
+    mock_names = mocker.patch(
+        "ultralytics.YOLO.names", new_callable=mocker.PropertyMock
+    )
+    mock_names.return_value = names
+
+    def mock_yolo_init(
+        self, model: str | Path, task: str | None = None, verbose: bool = False
+    ) -> None:
+        _ = self
+        _ = model
+        _ = task
+        _ = verbose
+
+    _ = mocker.patch.object(ultralytics.YOLO, "__init__", mock_yolo_init)
 
 
 def test_map_verbosity():
@@ -210,11 +246,13 @@ def test_app_version():
 
 def test_app_image(
     bus_jpg: Path,
-    mock_run: None,
+    mock_detecting_run: None,
+    mock_yolo: None,
     tmp_path: Path,
     weights_file: Path,
 ):
-    _ = mock_run
+    _ = mock_detecting_run
+    _ = mock_yolo
     result = runner.invoke(
         app,
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(bus_jpg)],
@@ -226,12 +264,14 @@ def test_app_image(
 
 def test_app_no_output(
     bus_jpg: Path,
-    mock_run: None,
+    mock_detecting_run: None,
+    mock_yolo: None,
     mocker: MockerFixture,
     tmp_path: Path,
     weights_file: Path,
 ):
-    _ = mock_run
+    _ = mock_detecting_run
+    _ = mock_yolo
 
     def mock_os_getcwd() -> str:
         return str(tmp_path)
@@ -248,9 +288,14 @@ def test_app_no_output(
 
 
 def test_app_directory(
-    dir_with_images: Path, mock_run: None, tmp_path: Path, weights_file: Path
+    dir_with_images: Path,
+    mock_detecting_run: None,
+    mock_yolo: None,
+    tmp_path: Path,
+    weights_file: Path,
 ):
-    _ = mock_run
+    _ = mock_detecting_run
+    _ = mock_yolo
     result = runner.invoke(
         app,
         [
@@ -265,8 +310,15 @@ def test_app_directory(
     assert len(os.listdir(tmp_path)) == 8
 
 
-def test_app_zip(mock_run: None, tmp_path: Path, weights_file: Path, zip_file: Path):
-    _ = mock_run
+def test_app_zip(
+    mock_detecting_run: None,
+    mock_yolo: None,
+    tmp_path: Path,
+    weights_file: Path,
+    zip_file: Path,
+):
+    _ = mock_detecting_run
+    _ = mock_yolo
     result = runner.invoke(
         app,
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(zip_file)],
@@ -277,12 +329,14 @@ def test_app_zip(mock_run: None, tmp_path: Path, weights_file: Path, zip_file: P
 
 def test_app_fail_to_save_image(
     bus_jpg: Path,
-    mock_run: None,
+    mock_detecting_run: None,
+    mock_yolo: None,
     mocker: MockerFixture,
     tmp_path: Path,
     weights_file: Path,
 ):
-    _ = mock_run
+    _ = mock_detecting_run
+    _ = mock_yolo
 
     def mock_cv2_imwrite(dst: str, img: cv2.typing.MatLike) -> bool:
         _ = dst
@@ -290,6 +344,24 @@ def test_app_fail_to_save_image(
         return False
 
     _ = mocker.patch("cv2.imwrite", mock_cv2_imwrite)
+    result = runner.invoke(
+        app,
+        ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(bus_jpg)],
+    )
+    assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 0
+
+
+def test_app_no_detections(
+    bus_jpg: Path,
+    mock_detecting_run_no_detections: None,
+    mock_yolo: None,
+    tmp_path: Path,
+    weights_file: Path,
+):
+    _ = mock_detecting_run_no_detections
+    _ = mock_yolo
+
     result = runner.invoke(
         app,
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(bus_jpg)],
