@@ -9,7 +9,6 @@ import os
 import pytest
 import shutil
 import supervision as sv
-import torch
 import ultralytics
 import zipfile
 
@@ -21,9 +20,9 @@ from mist.cli import (
 )
 from pathlib import Path
 from pytest_mock import MockerFixture
+from supervision.config import CLASS_NAME_DATA_FIELD
 from typer.testing import CliRunner
-from typing import Any, Callable, Iterator
-from ultralytics.engine.results import Results
+from typing import Callable
 
 runner = CliRunner()
 
@@ -75,6 +74,80 @@ def dir_with_images_and_text(
     _ = shutil.move(blank_tif, tmp_path.joinpath("image3.tif"))
     _ = shutil.move(text_file, tmp_path.joinpath("text.txt"))
     return tmp_path
+
+
+@pytest.fixture
+def mock_run(
+    bus_class_ids: list[int],
+    bus_masks: npt.NDArray[np.bool],
+    mocker: MockerFixture,
+):
+    class_names = [
+        "bus",
+        "cat",
+        "dog",
+        "horse",
+        "bird",
+        "car",
+        "cellphone",
+        "tv",
+        "clock",
+        "person",
+    ]
+    names = {index: name for index, name in enumerate(class_names)}
+    mock_names = mocker.patch(
+        "ultralytics.YOLO.names", new_callable=mocker.PropertyMock
+    )
+    mock_names.return_value = names
+
+    def mock_yolo_init(
+        self, model: str | Path, task: str | None = None, verbose: bool = False
+    ) -> None:
+        _ = self
+        _ = model
+        _ = task
+        _ = verbose
+
+    def mock_detecting_run(
+        image: npt.NDArray[np.uint8],
+        model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
+        class_names: list[str],
+        dump_masks: dump.MaskConfiguration,
+        erosion: erosion.Configuration,
+        logger: logging.Logger,
+        merge_classes: list[int],
+        overlap_height: float,
+        overlap_width: float,
+        tile_height: int,
+        tile_width: int,
+    ) -> sv.Detections:
+        _ = image
+        _ = model
+        _ = class_names
+        _ = dump_masks
+        _ = erosion
+        _ = logger
+        _ = merge_classes
+        _ = overlap_height
+        _ = overlap_width
+        _ = tile_height
+        _ = tile_width
+
+        return sv.Detections(
+            class_id=np.array(bus_class_ids),
+            confidence=None,
+            data={
+                CLASS_NAME_DATA_FIELD: np.array(
+                    [class_names[class_id] for class_id in bus_class_ids]
+                ),
+            },
+            mask=bus_masks,
+            tracker_id=None,
+            xyxy=sv.mask_to_xyxy(bus_masks),
+        )
+
+    _ = mocker.patch.object(ultralytics.YOLO, "__init__", mock_yolo_init)
+    _ = mocker.patch("mist.detecting.run", mock_detecting_run)
 
 
 def test_map_verbosity():
@@ -136,121 +209,29 @@ def test_app_version():
 
 
 def test_app_image(
-    bus_class_ids: list[int],
-    bus_image: npt.NDArray[np.uint8],
     bus_jpg: Path,
-    bus_masks: npt.NDArray[np.bool],
-    mocker: MockerFixture,
+    mock_run: None,
     tmp_path: Path,
     weights_file: Path,
 ):
-    boxes = torch.tensor(
-        [
-            [box[0], box[1], box[2], box[3], 0.9, class_id]
-            for box, class_id in zip(sv.mask_to_xyxy(bus_masks), bus_class_ids)
-        ]
-    )
-    class_names = [
-        "bus",
-        "cat",
-        "dog",
-        "horse",
-        "bird",
-        "car",
-        "cellphone",
-        "tv",
-        "clock",
-        "person",
-    ]
-    names = {index: name for index, name in enumerate(class_names)}
-    results = [
-        Results(
-            bus_image,
-            str(bus_jpg),
-            names,
-            boxes=boxes,
-            masks=torch.tensor(bus_masks),
-            probs=None,
-            obb=None,
-            speed=None,
-            semantic_mask=None,
-            depth=None,
-        )
-    ]
-
-    mock_names = mocker.patch(
-        "ultralytics.YOLO.names", new_callable=mocker.PropertyMock
-    )
-    mock_names.return_value = names
-
-    def mock_init(
-        self, model: str | Path, task: str | None = None, verbose: bool = False
-    ) -> None:
-        _ = self
-        _ = model
-        _ = task
-        _ = verbose
-
-    def mock_call(
-        self,
-        source: npt.NDArray[np.uint8],
-        stream: bool = False,
-        **kwargs: Any,
-    ) -> Iterator[Results | torch.Tensor] | list[Results] | list[torch.Tensor]:
-        _ = self
-        _ = source
-        _ = stream
-        _ = kwargs
-        return results
-
-    mocker.patch.object(ultralytics.YOLO, "__init__", mock_init)
-    mocker.patch.object(ultralytics.YOLO, "__call__", mock_call)
-    yolo = ultralytics.YOLO("yolo26n-seg.pt")
-    assert hasattr(yolo, "names")
-    assert yolo.names == names
-    actual = yolo(bus_image)
-    assert isinstance(actual, list)
-    assert actual == results
-
-    def mock_detecting_run(
-        image: npt.NDArray[np.uint8],
-        model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
-        class_names: list[str],
-        dump_masks: dump.MaskConfiguration,
-        erosion: erosion.Configuration,
-        logger: logging.Logger,
-        merge_classes: list[int],
-        overlap_height: float,
-        overlap_width: float,
-        tile_height: int,
-        tile_width: int,
-    ) -> sv.Detections:
-        _ = image
-        _ = model
-        _ = class_names
-        _ = dump_masks
-        _ = erosion
-        _ = logger
-        _ = merge_classes
-        _ = overlap_height
-        _ = overlap_width
-        _ = tile_height
-        _ = tile_width
-
-        return sv.Detections.from_ultralytics(results)
-
-    mocker.patch("mist.detecting.run", mock_detecting_run)
-
+    _ = mock_run
     result = runner.invoke(
         app,
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(bus_jpg)],
     )
     assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 1
+    assert tmp_path.joinpath(bus_jpg.stem + "_mist.png").exists()
 
 
 def test_app_no_output(
-    bus_jpg: Path, mocker: MockerFixture, tmp_path: Path, weights_file: Path
+    bus_jpg: Path,
+    mock_run: None,
+    mocker: MockerFixture,
+    tmp_path: Path,
+    weights_file: Path,
 ):
+    _ = mock_run
 
     def mock_os_getcwd() -> str:
         return str(tmp_path)
@@ -266,7 +247,10 @@ def test_app_no_output(
     assert tmp_path.joinpath(bus_jpg.stem + "_mist.png").exists()
 
 
-def test_app_directory(dir_with_images: Path, tmp_path: Path, weights_file: Path):
+def test_app_directory(
+    dir_with_images: Path, mock_run: None, tmp_path: Path, weights_file: Path
+):
+    _ = mock_run
     result = runner.invoke(
         app,
         [
@@ -278,19 +262,28 @@ def test_app_directory(dir_with_images: Path, tmp_path: Path, weights_file: Path
         ],
     )
     assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 8
 
 
-def test_app_zip(zip_file: Path, tmp_path: Path, weights_file: Path):
+def test_app_zip(mock_run: None, tmp_path: Path, weights_file: Path, zip_file: Path):
+    _ = mock_run
     result = runner.invoke(
         app,
         ["--device=cpu", "--output", str(tmp_path), str(weights_file), str(zip_file)],
     )
     assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 6
 
 
 def test_app_fail_to_save_image(
-    bus_jpg: Path, mocker: MockerFixture, tmp_path: Path, weights_file: Path
+    bus_jpg: Path,
+    mock_run: None,
+    mocker: MockerFixture,
+    tmp_path: Path,
+    weights_file: Path,
 ):
+    _ = mock_run
+
     def mock_cv2_imwrite(dst: str, img: cv2.typing.MatLike) -> bool:
         _ = dst
         _ = img

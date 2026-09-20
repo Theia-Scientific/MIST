@@ -79,7 +79,7 @@ def bus_image(bus_jpg: Path) -> npt.NDArray[np.uint8]:
 
 
 @pytest.fixture
-def bus_masks(bus_txt: Path) -> npt.NDArray[np.uint8]:
+def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
     mask_width_px = 640
     mask_height_px = 640
     with open(bus_txt, "r") as txt:
@@ -102,7 +102,7 @@ def bus_masks(bus_txt: Path) -> npt.NDArray[np.uint8]:
                     polygon, resolution_wh=(mask_width_px, mask_height_px)
                 )
             )
-    return np.array(masks)
+    return np.array([mask.astype(np.bool) for mask in masks])
 
 
 @pytest.fixture
