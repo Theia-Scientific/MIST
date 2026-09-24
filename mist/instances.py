@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import numpy.typing as npt
 
-from pydantic import BaseModel, ConfigDict
-from typing import List
+from pydantic import BaseModel
 
 
-class Instance(BaseModel):
-    box: List[int]
+class Instance(BaseModel, arbitrary_types_allowed=True):
+    box: list[int]
     class_index: int
     id: int
-    mask: np.ndarray
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    mask: npt.NDArray[np.bool]

@@ -2,93 +2,82 @@
 
 import logging
 import numpy as np
+import numpy.typing as npt
 import supervision as sv
 
 from collections import Counter
 from mist import dump, erosion, merging, tiling
-from mist.instances import Instance
-from mist.utils import read_image_file
-from mist.visualizing import Tile as VisualTile
-from pathlib import Path
-from pydantic import BaseModel, ConfigDict
-from typing import Callable, Any, Dict, List
+from pydantic import BaseModel
+from supervision.config import CLASS_NAME_DATA_FIELD
+from typing import Callable
 
-DEFAULT_MERGE_CLASSES: List[int] = []
+LOGGER: logging.Logger = logging.getLogger(__name__)
+
+DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
+DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
+DEFAULT_MERGE_CLASSES: list[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
 DEFAULT_OVERLAP_WIDTH: float = 0.2
 DEFAULT_SHOW_TILES: bool = False
 DEFAULT_TILE_HEIGHT: int = 640
 DEFAULT_TILE_WIDTH: int = 640
-
-LOGGER: logging.Logger = logging.getLogger(__name__)
+INSTANCE_ID_DATA_FIELD: str = "instance_id"
+STATS_METADATA_FIELD: str = "stats"
 
 
 class Stats(BaseModel):
-    merged: Counter
-    unmerged: Counter
-
-
-class Result(BaseModel):
-    class_names: List[str]
-    instances: List[Instance]
-    original_image: np.ndarray
-    stats: Stats
-    visual_tiles: List[VisualTile]
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    merged: Counter[str]
+    unmerged: Counter[str]
 
 
 def run(
-    src: Path,
-    model: Callable[[np.ndarray, Dict[str, Any]], sv.Detections],
-    class_names: List[str],
-    dump_masks: dump.MaskConfiguration = dump.MaskConfiguration(),
-    erosion: erosion.Configuration = erosion.Configuration(),
+    img: npt.NDArray[np.uint8],
+    model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
+    class_names: list[str],
+    dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
+    erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
     logger: logging.Logger = LOGGER,
-    merge_classes: List[int] = DEFAULT_MERGE_CLASSES,
+    merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
     overlap_width: float = DEFAULT_OVERLAP_WIDTH,
-    parameters: Dict[str, Any] = {},
     tile_height: int = DEFAULT_TILE_HEIGHT,
     tile_width: int = DEFAULT_TILE_WIDTH,
-) -> Result:
-    logger.debug(f"{src=}")
+) -> sv.Detections:
+    logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
     logger.debug(f"{dump_masks=}")
     logger.debug(f"{erosion=}")
     logger.debug(f"{merge_classes=}")
     logger.debug(f"{overlap_height=}")
     logger.debug(f"{overlap_width=}")
-    logger.debug(f"{parameters=}")
     logger.debug(f"{tile_height=}")
     logger.debug(f"{tile_width=}")
-    logger.info("Reading image file...")
-    original_img = read_image_file(src)
-    logger.info("Reading image file...DONE")
-    orig_height, orig_width, *_ = original_img.shape
+    img_shape: tuple[int, ...] = img.shape
+    orig_height, orig_width, *_ = img_shape
     logger.debug(f"{orig_height=}")
     logger.debug(f"{orig_width=}")
     orig_size = (orig_width, orig_height)
     logger.debug(f"{orig_size=}")
     logger.info("Creating tiles...")
     tiles = tiling.run(
-        original_img,
-        tile_size=(tile_width, tile_height),
+        img,
         overlap=(overlap_width, overlap_height),
+        tile_size=(tile_width, tile_height),
     )
     logger.info("Creating tiles...DONE")
-    masks = []
-    class_indices = []
-    visual_tiles = []
+    masks: list[merging.Mask] = []
+    class_indices: list[int] = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
-        detections = model(tile.img, parameters)
+        detections = model(tile.img)
         if detections.class_id is None:
             class_indices.extend([0 for _ in range(len(detections))])
         else:
-            class_indices.extend(detections.class_id.tolist())
+            class_indices.extend(list(detections.class_id))
         if detections.mask is None:
-            masks_data = np.zeros((len(detections), tile_height, tile_width))
+            masks_data = np.zeros(
+                (len(detections), tile_height, tile_width), dtype=bool
+            )
         else:
             masks_data = detections.mask
         masks.extend(
@@ -98,14 +87,6 @@ def run(
             ]
         )
         logger.info(f"Running inference on {index} tile...DONE")
-        visual_tiles.append(
-            VisualTile(
-                x_min=tile.x_start,
-                y_min=tile.y_start,
-                x_max=tile.x_start + tile_width,
-                y_max=tile.y_start + tile_height,
-            )
-        )
     logger.info("Merging results...")
     instances = merging.run(
         class_indices,
@@ -121,12 +102,25 @@ def run(
     logger.debug(f"{all_class_names=}")
     instance_class_names = [class_names[i.class_index] for i in instances]
     logger.debug(f"{instance_class_names=}")
-    return Result(
-        class_names=class_names,
-        instances=instances,
-        original_image=original_img,
-        stats=Stats(
-            merged=Counter(instance_class_names), unmerged=Counter(all_class_names)
-        ),
-        visual_tiles=visual_tiles,
-    )
+    if len(instances) > 0:
+        return sv.Detections(
+            class_id=np.array([instance.class_index for instance in instances]),
+            confidence=None,
+            data={
+                CLASS_NAME_DATA_FIELD: np.array(instance_class_names),
+                INSTANCE_ID_DATA_FIELD: np.array(
+                    [instance.id for instance in instances]
+                ),
+            },
+            mask=(np.array([instance.mask for instance in instances])),
+            metadata={
+                STATS_METADATA_FIELD: Stats(
+                    merged=Counter(instance_class_names),
+                    unmerged=Counter(all_class_names),
+                ).model_dump()
+            },
+            tracker_id=None,
+            xyxy=np.array([np.array(instance.box) for instance in instances]),
+        )
+    else:
+        return sv.Detections.empty()

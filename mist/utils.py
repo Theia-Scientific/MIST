@@ -5,14 +5,13 @@ import io
 import logging
 import mimetypes
 import numpy as np
+import numpy.typing as npt
 import tifffile
 
 from pathlib import Path
-from typing import Optional
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-BIT_DEPTH_DTYPE: str = "uint8"
 COLOR_CHANNEL_COUNT: int = 3
 JPEG_MIME_TYPE: str = "image/jpeg"
 NPY_MIME_TYPE: str = "application/numpy"
@@ -27,34 +26,42 @@ class ImageDecodeError(Exception):
 
 
 class UnsupportedImageFile(Exception):
-    def __init__(self, path: Path):
-        self.path = path
+    def __init__(self, path: Path, msg: str = ""):
+        self.path: Path = path
+        super().__init__(self, msg)
 
 
-def count_channels(img: np.ndarray) -> int:
+def count_channels(img: npt.NDArray[np.uint8]) -> int:
     return img.shape[-1] if img.ndim == 3 else 1
 
 
-def correct_cv_image(src: np.ndarray, logger: logging.Logger = LOGGER) -> np.ndarray:
+def correct_cv_image(
+    src: npt.NDArray[np.uint8 | np.uint16 | np.float32],
+    supported_bit_depth: int = 255,
+    logger: logging.Logger = LOGGER,
+) -> npt.NDArray[np.uint8]:
     logger.debug(f"{src.dtype=}")
-    if src.dtype == BIT_DEPTH_DTYPE:
-        corrected_image = src
+    src_max = int(np.max(src))
+    logger.debug(f"{src_max=}")
+    src_min = int(np.min(src))
+    if src_max == src_min:
+        src_min = 0
+    logger.debug(f"{src_min=}")
+    normalization_factor = abs(src_max - src_min)
+    logger.debug(f"{normalization_factor=}")
+    if normalization_factor > 0:
+        normalized_image = ((src - src_min) / normalization_factor).astype(np.float32)
     else:
-        src_max = np.max(src)
-        logger.debug(f"{src_max=}")
-        src_min = np.min(src)
-        logger.debug(f"{src_min=}")
-        if src_max == src_min:
-            normalized_image = src.astype(np.float32)
-        else:
-            normalized_image = ((src - src_min) / (src_max - src_min)).astype(
-                np.float32
-            )
-        corrected_image = np.round(normalized_image * 256).astype(BIT_DEPTH_DTYPE)
+        normalized_image = src
+    corrected_image: npt.NDArray[np.uint8] = np.round(
+        normalized_image * supported_bit_depth
+    ).astype(np.uint8)
     channels_count = count_channels(corrected_image)
     logger.debug(f"{channels_count=}")
     if channels_count < COLOR_CHANNEL_COUNT:
-        three_channel_image = cv2.cvtColor(corrected_image, cv2.COLOR_GRAY2BGR)
+        three_channel_image = np.asarray(
+            cv2.cvtColor(corrected_image, cv2.COLOR_GRAY2BGR), dtype=np.uint8
+        )
     else:
         three_channel_image = corrected_image
     return three_channel_image
@@ -62,22 +69,22 @@ def correct_cv_image(src: np.ndarray, logger: logging.Logger = LOGGER) -> np.nda
 
 def decode_data(
     data: bytes, mime_type: str, logger: logging.Logger = LOGGER
-) -> np.ndarray:
+) -> npt.NDArray[np.uint8]:
     logger.debug(f"{mime_type=}")
     if mime_type == NPY_MIME_TYPE:
-        return np.load(io.BytesIO(data), allow_pickle=True)
+        return np.asarray(np.load(io.BytesIO(data), allow_pickle=True), dtype=np.uint8)
     elif mime_type == TIFF_MIME_TYPE:
         return correct_cv_image(tifffile.imread(io.BytesIO(data)))
     else:
         src = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_UNCHANGED)
         if src is None:
             raise ImageDecodeError()
-        return correct_cv_image(src)
+        return correct_cv_image(np.asarray(src, dtype=np.uint8))
 
 
 def is_image_file_supported(
     file_name: str, logger: logging.Logger = LOGGER
-) -> Optional[str]:
+) -> str | None:
     logger.debug(f"{file_name=}")
     SUPPORTED_MIME_TYPES = [
         JPEG_MIME_TYPE,
@@ -93,7 +100,9 @@ def is_image_file_supported(
         return None
 
 
-def read_image_file(source: Path, logger: logging.Logger = LOGGER) -> np.ndarray:
+def read_image_file(
+    source: Path, logger: logging.Logger = LOGGER
+) -> npt.NDArray[np.uint8]:
     logger.debug(f"{source=}")
     mime_type = is_image_file_supported(source.name)
     logger.debug(f"{mime_type=}")

@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 
+import cv2
 import importlib.metadata
-import json
 import logging
 import numpy as np
+import numpy.typing as npt
 import os
 import supervision as sv
-import sys
 import tempfile
 import typer
+import ultralytics
 import zipfile
 
-from mist import __app_name__, detecting, dump, erosion, utils, visualizing
+from mist import __app_name__, detecting, dump, erosion, utils
 from natsort import natsorted
 from pathlib import Path
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
-from ultralytics.models import YOLO
+from typing import Annotated
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 PREFIX: str = f"{__app_name__.upper()}"
@@ -29,11 +29,14 @@ class Result(BaseModel):
     stats: detecting.Stats
 
 
-def map_verbosity(enabled: bool) -> str:
-    if enabled:
-        return "DEBUG"
+def map_verbosity(count: int) -> str:
+    if count == 1:
+        log_level = "INFO"
+    elif count >= 2:
+        log_level = "DEBUG"
     else:
-        return "INFO"
+        log_level = "WARNING"
+    return log_level
 
 
 def version_callback(value: bool):
@@ -43,8 +46,8 @@ def version_callback(value: bool):
         raise typer.Exit()
 
 
-def expand_sources(sources: List[Path]) -> List[Path]:
-    expanded_sources = []
+def expand_sources(sources: list[Path]) -> list[Path]:
+    expanded_sources: list[Path] = []
     for source in sources:
         LOGGER.debug(f"{source=}")
         src = source.expanduser().resolve()
@@ -79,196 +82,226 @@ def expand_sources(sources: List[Path]) -> List[Path]:
 
 @app.command()
 def main(
-    weights_file: Path = typer.Argument(help="The path to the YOLO weights file."),
-    sources: List[Path] = typer.Argument(
-        help="The images to run tiled inference with the weights file."
-    ),
-    device: str = typer.Option(
-        "cuda:0",
-        help="The device to use for inference. Use 'mps' for Apple" "Silicon.",
-    ),
-    dump_class_masks: bool = typer.Option(
-        dump.DEFAULT_MASK_CLASS, help="Creates PNGs of class masks during merging."
-    ),
-    dump_data_masks: bool = typer.Option(
-        dump.DEFAULT_MASK_DATA, help="Creates PNGs of data masks during merging."
-    ),
-    dump_erosion_masks: bool = typer.Option(
-        dump.DEFAULT_MASK_ERODE, help="Creates PNGs of erosion masks during merging."
-    ),
-    dump_instance_masks: bool = typer.Option(
-        dump.DEFAULT_MASK_INSTANCE,
-        help="Creates PNGs of instance masks during merging.",
-    ),
-    dump_masks_to: Path = typer.Option(
-        dump.DEFAULT_MASK_TO,
-        help="Location to create PNGs of masks during merging.",
-    ),
-    erosion_enabled: bool = typer.Option(
-        erosion.DEFAULT_ENABLED,
-        "--erosion/--no-erosion",
-        help=(
-            "Enable an erode morphological operation on each instance mask "
-            "before merging."
+    weights_file: Annotated[
+        Path, typer.Argument(help="The path to the YOLO weights file.")
+    ],
+    sources: Annotated[
+        list[Path],
+        typer.Argument(help="The images to run tiled inference with the weights file."),
+    ],
+    device: Annotated[
+        str,
+        typer.Option(
+            help="The device to use for inference. Use 'mps' for Apple Silicon.",
         ),
-    ),
-    erosion_iterations: int = typer.Option(
-        erosion.DEFAULT_ITERATIONS,
-        help="Number of erode operations to execute. Ignored if erosion is disabled.",
-    ),
-    erosion_size: int = typer.Option(
-        erosion.DEFAULT_SIZE,
-        help=(
-            "Size of the square kernel to use during the erosion operation. "
-            "Ignored if erosion is disabled."
+    ] = "cuda:0",
+    disable_tiled_inference: Annotated[
+        bool,
+        typer.Option(
+            "--no-tiled-inference/--tiled-inference",
+            "-N",
+            help="Disable tiling inference and run normal inference.",
         ),
-    ),
-    inference_confidence: float = typer.Option(
-        0.35,
-        help="The confidence threshold as a ratio between 0.0. and 1.0.",
-    ),
-    inference_iou: float = typer.Option(
-        0.7, help="The Intersection-over-Union for inference."
-    ),
-    inference_image_size: int = typer.Option(
-        640, help="The size of the image for the YOLO model."
-    ),
-    inference_max_detections: int = typer.Option(
-        1000,
-        help="The maximum number of detections for inference.",
-    ),
-    inference_silent: bool = typer.Option(
-        False, help="Silence the output for inference."
-    ),
-    merge_classes: List[int] = typer.Option(
-        detecting.DEFAULT_MERGE_CLASSES,
-        "--merge-class",
-        "-c",
-        help="Only merge instances with these class indices.",
-    ),
-    overlap_height: float = typer.Option(
-        detecting.DEFAULT_OVERLAP_HEIGHT,
-        help=(
-            "The amount of overlap in the Y direction as a ratio between 0.0 "
-            "and 1.0."
+    ] = False,
+    dump_class_masks: Annotated[
+        bool, typer.Option(help="Creates PNGs of class masks during merging.")
+    ] = dump.DEFAULT_MASK_CLASS,
+    dump_data_masks: Annotated[
+        bool, typer.Option(help="Creates PNGs of data masks during merging.")
+    ] = dump.DEFAULT_MASK_DATA,
+    dump_erosion_masks: Annotated[
+        bool, typer.Option(help="Creates PNGs of erosion masks during merging.")
+    ] = dump.DEFAULT_MASK_ERODE,
+    dump_instance_masks: Annotated[
+        bool,
+        typer.Option(
+            help="Creates PNGs of instance masks during merging.",
         ),
-    ),
-    overlap_width: float = typer.Option(
-        detecting.DEFAULT_OVERLAP_WIDTH,
-        help=(
-            "The amount of overlap in the X direction as a ratio between 0.0 "
-            "and 1.0."
+    ] = dump.DEFAULT_MASK_INSTANCE,
+    dump_masks_to: Annotated[
+        Path,
+        typer.Option(
+            help="Location to create PNGs of masks during merging.",
         ),
-    ),
-    random_object_colors: bool = typer.Option(
-        False,
-        help=(
-            "Use random colors for each instance; otherwise, select random "
-            "color for each class."
+    ] = dump.DEFAULT_MASK_TO,
+    erosion_enabled: Annotated[
+        bool,
+        typer.Option(
+            "--erosion/--no-erosion",
+            help=(
+                "Enable an erode morphological operation on each instance mask "
+                "before merging."
+            ),
         ),
-    ),
-    show: bool = typer.Option(True, help="Show visualization"),
-    show_tiles: bool = typer.Option(False, help="Show tiles in visualization"),
-    tile_height: int = typer.Option(
-        detecting.DEFAULT_TILE_HEIGHT, help="The height of a tile in pixels."
-    ),
-    tile_width: int = typer.Option(
-        detecting.DEFAULT_TILE_WIDTH, help="The width of a tile in pixels."
-    ),
-    visualize_classes: List[int] = typer.Option(
-        [],
-        "--visualize-classes",
-        "-C",
-        help="Only visualize instances with these class indices.",
-    ),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Print debugging statements to STDOUT.",
-        envvar=f"{PREFIX}_VERBOSE",
-    ),
-    version: Optional[bool] = typer.Option(
-        None,
-        "--version",
-        help="Prints the version to STDOUT",
-        callback=version_callback,
-        is_eager=True,
-    ),
+    ] = erosion.DEFAULT_ENABLED,
+    erosion_iterations: Annotated[
+        int,
+        typer.Option(
+            help="Number of erode operations to execute. Ignored if erosion is disabled.",
+        ),
+    ] = erosion.DEFAULT_ITERATIONS,
+    erosion_size: Annotated[
+        int,
+        typer.Option(
+            help=(
+                "Size of the square kernel to use during the erosion operation. "
+                "Ignored if erosion is disabled."
+            ),
+        ),
+    ] = erosion.DEFAULT_SIZE,
+    inference_confidence: Annotated[
+        float,
+        typer.Option(
+            help="The confidence threshold as a ratio between 0.0. and 1.0.",
+        ),
+    ] = 0.35,
+    inference_iou: Annotated[
+        float, typer.Option(help="The Intersection-over-Union for inference.")
+    ] = 0.7,
+    inference_image_size: Annotated[
+        int, typer.Option(help="The size of the image for the YOLO model.")
+    ] = 640,
+    inference_max_detections: Annotated[
+        int,
+        typer.Option(
+            help="The maximum number of detections for inference.",
+        ),
+    ] = 1000,
+    inference_silent: Annotated[
+        bool, typer.Option(help="Silence the output for inference.")
+    ] = False,
+    merge_classes: Annotated[
+        list[int],
+        typer.Option(
+            "--merge-class",
+            "-c",
+            help="Only merge instances with these class indices.",
+        ),
+    ] = detecting.DEFAULT_MERGE_CLASSES,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "--output",
+            "-o",
+            help="The destination for saving annotated images and detections.",
+        ),
+    ] = None,
+    overlap_height: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "The amount of overlap in the Y direction as a ratio between 0.0 "
+                "and 1.0."
+            ),
+        ),
+    ] = detecting.DEFAULT_OVERLAP_HEIGHT,
+    overlap_width: Annotated[
+        float,
+        typer.Option(
+            help=(
+                "The amount of overlap in the X direction as a ratio between 0.0 "
+                "and 1.0."
+            ),
+        ),
+    ] = detecting.DEFAULT_OVERLAP_WIDTH,
+    tile_height: Annotated[
+        int, typer.Option(help="The height of a tile in pixels.")
+    ] = detecting.DEFAULT_TILE_HEIGHT,
+    tile_width: Annotated[
+        int, typer.Option(help="The width of a tile in pixels.")
+    ] = detecting.DEFAULT_TILE_WIDTH,
+    verbose: Annotated[
+        int,
+        typer.Option(
+            "--verbose", "-v", help="Print debugging statements to STDOUT.", count=True
+        ),
+    ] = 0,
+    version: Annotated[
+        bool | None,
+        typer.Option(
+            "--version",
+            help="Prints the version to STDOUT",
+            callback=version_callback,
+            is_eager=True,
+        ),
+    ] = None,
 ):
     logging.basicConfig(level=map_verbosity(verbose))
     LOGGER.debug(f"{version=}")
-    model = YOLO(weights_file)
+    model = ultralytics.YOLO(weights_file)
 
-    def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+    def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         return sv.Detections.from_ultralytics(
-            model(  # pyright: ignore
-                image,
-                agnostic_nms=parameters.get("agnostic_nms", False),
-                device=parameters.get("device", "cuda:0"),
-                classes=parameters.get("classes", None),
-                conf=parameters.get("confidence", 0.35),
-                imgsz=parameters.get("image_size", 640),
-                iou=parameters.get("iou", 0.7),
-                max_det=parameters.get("maximum_detections", 1000),
-                retina_masks=parameters.get("retina_masks", True),
-                verbose=parameters.get("verbose", False),
+            list(
+                model(
+                    image,
+                    agnostic_nms=False,
+                    device=device,
+                    classes=None,
+                    conf=inference_confidence,
+                    imgsz=inference_image_size,
+                    iou=inference_iou,
+                    max_det=inference_max_detections,
+                    retina_masks=True,
+                    verbose=not inference_silent,
+                )
             )[0]
         )
 
-    results = []
+    if output is None:
+        dst = Path(os.getcwd())
+    else:
+        dst = output
+    LOGGER.debug(f"{dst=}")
+    os.makedirs(dst, exist_ok=True)
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
-        result = detecting.run(
-            src,
-            predict,
-            class_names=[name for _, name in sorted(model.names.items())],
-            dump_masks=dump.MaskConfiguration(
-                clazz=dump_class_masks,
-                data=dump_data_masks,
-                erode=dump_erosion_masks,
-                instance=dump_instance_masks,
-                to=dump_masks_to,
-            ),
-            erosion=erosion.Configuration(
-                enabled=erosion_enabled,
-                iterations=erosion_iterations,
-                size=erosion_size,
-            ),
-            merge_classes=merge_classes,
-            overlap_height=overlap_height,
-            overlap_width=overlap_width,
-            tile_height=tile_height,
-            tile_width=tile_width,
-            logger=LOGGER,
-            parameters={
-                "confidence": inference_confidence,
-                "device": device,
-                "image_size": inference_image_size,
-                "iou": inference_iou,
-                "maximum_detections": inference_max_detections,
-                "verbose": not inference_silent,
-            },
-        )
-        LOGGER.info("Detecting...DONE")
-        if show:
-            LOGGER.info("Visualizing results...")
-            visual_tiles = []
-            if show_tiles:
-                visual_tiles = result.visual_tiles
-            else:
-                visual_tiles = []
-            visualizing.run(
-                result.instances,
-                result.original_image,
-                result.class_names,
-                tiles=visual_tiles,
-                random_object_colors=random_object_colors,
-                show_classes_list=visualize_classes,
+        src_img = utils.read_image_file(src)
+        if disable_tiled_inference:
+            detections = predict(src_img)
+        else:
+            detections = detecting.run(
+                src_img,
+                predict,
+                class_names=[name for _, name in sorted(model.names.items())],
+                dump_masks=dump.MaskConfiguration(
+                    clazz=dump_class_masks,
+                    data=dump_data_masks,
+                    erode=dump_erosion_masks,
+                    instance=dump_instance_masks,
+                    to=dump_masks_to,
+                ),
+                erosion=erosion.Configuration(
+                    enabled=erosion_enabled,
+                    iterations=erosion_iterations,
+                    size=erosion_size,
+                ),
+                merge_classes=merge_classes,
+                overlap_height=overlap_height,
+                overlap_width=overlap_width,
+                tile_height=tile_height,
+                tile_width=tile_width,
+                logger=LOGGER,
             )
-            LOGGER.info("Visualizing results...DONE")
-        results.append(Result(source=str(src), stats=result.stats).model_dump())
-    json.dump(results, sys.stdout)
+        LOGGER.info("Detecting...DONE")
+        if detections.is_empty():
+            LOGGER.warning(f"No detections for the '{src}' image file")
+        else:
+            LOGGER.info("Saving...")
+            annotator = sv.MaskAnnotator()
+            annotated_image = annotator.annotate(src_img, detections)
+            if disable_tiled_inference:
+                img_dst = dst.joinpath(src.stem + "_nomist.png")
+            else:
+                img_dst = dst.joinpath(src.stem + "_mist.png")
+            LOGGER.debug(f"{img_dst=}")
+            result = cv2.imwrite(str(img_dst), annotated_image)
+            LOGGER.debug(f"{result=}")
+            if result:
+                LOGGER.info(f"Successfully saved '{img_dst}' to disk")
+            else:
+                LOGGER.error(f"Failed to save '{img_dst}' to disk")
+            LOGGER.info("Saving...DONE")
 
 
 if __name__ == "__main__":

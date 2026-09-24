@@ -3,35 +3,37 @@
 import cv2
 import logging
 import numpy as np
+import numpy.typing as npt
 import os
 import torch
 
 from mist import dump, erosion
 from mist.instances import Instance
-from pydantic import BaseModel, ConfigDict
-from typing import List, Tuple
+from pydantic import BaseModel
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
+DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
+DEFAULT_MERGE_CLASSES: list[int] = []
 
-class Mask(BaseModel):
-    data: np.ndarray
+
+class Mask(BaseModel, arbitrary_types_allowed=True):
+    data: npt.NDArray[np.bool]
     offset_x: int
     offset_y: int
 
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
 
 def run(
-    class_indices: List[int],
-    masks: List[Mask],
-    src_image_size: Tuple[int, int],
-    tile_size: Tuple[int, int],
-    erosion: erosion.Configuration = erosion.Configuration(),
-    dump_masks: dump.MaskConfiguration = dump.MaskConfiguration(),
+    class_indices: list[int],
+    masks: list[Mask],
+    src_image_size: tuple[int, int],
+    tile_size: tuple[int, int],
+    erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
+    dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
     logger: logging.Logger = LOGGER,
-    merge_classes: List[int] = [],
-) -> List[Instance]:
+    merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
+) -> list[Instance]:
     logger.debug(f"{class_indices=}")
     logger.debug(f"{masks=}")
     logger.debug(f"{src_image_size=}")
@@ -42,14 +44,14 @@ def run(
     src_image_width, src_image_height = src_image_size
     tensor_class_indices = torch.tensor(class_indices)
     instance_id = 0
-    instances = []
+    instances: list[Instance] = []
     if erosion.enabled:
         erosion_kernel = np.ones((erosion.size, erosion.size), np.uint8)
     else:
         erosion_kernel = None
     for cls_index in torch.unique(tensor_class_indices):
         logger.debug(f"{cls_index=}")
-        cls_index_int = cls_index.item()
+        cls_index_int = int(cls_index.item())
         logger.debug(f"{cls_index_int=}")
         if (cls_index in merge_classes and len(merge_classes) > 0) or len(
             merge_classes
@@ -70,14 +72,16 @@ def run(
                         erosion_kernel,
                         iterations=erosion.iterations,
                     )
-                    dump_masks.write_erode(erode_img, cls_index_int, i)
+                    _ = dump_masks.write_erode(erode_img, cls_index_int, i)
                     mask_data = erode_img.astype(bool)
                 class_mask[
                     mask.offset_y : mask.offset_y + tile_height,
                     mask.offset_x : mask.offset_x + tile_width,
                 ] += mask_data
-                dump_masks.write_class(class_mask.astype(np.uint8), cls_index_int, i)
-                dump_masks.write_data(
+                _ = dump_masks.write_class(
+                    class_mask.astype(np.uint8), cls_index_int, i
+                )
+                _ = dump_masks.write_data(
                     mask.data.astype(np.uint8),
                     cls_index_int,
                     i,
@@ -92,13 +96,13 @@ def run(
                 instance_mask = np.zeros(
                     (src_image_height, src_image_width), dtype=np.uint8
                 )
-                cv2.fillPoly(instance_mask, [contour], 1)
-                dump_masks.write_instance(instance_mask, cls_index_int, instance_id)
+                _ = cv2.fillPoly(instance_mask, [contour], 1)
+                _ = dump_masks.write_instance(instance_mask, cls_index_int, instance_id)
                 instance = Instance(
                     box=[x, y, x + w, y + h],
-                    class_index=cls_index,
+                    class_index=cls_index_int,
                     id=instance_id,
-                    mask=instance_mask,
+                    mask=instance_mask.astype(np.bool),
                 )
                 instances.append(instance)
                 instance_id += 1

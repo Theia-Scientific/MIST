@@ -1,3 +1,7 @@
+[build-system]
+requires = [ "hatchling" ]
+build-backend = "hatchling.build"
+
 [project]
 name = "mist"
 version = "0.1.0"
@@ -26,15 +30,11 @@ classifiers = [
 dependencies = [
     "imagecodecs",
     "natsort",
-    "opencv-python",
+    "opencv-python-headless",
     "pydantic",
     "supervision>=0.30",
     "tifffile",
 ]
-
-[build-system]
-requires = [ "hatchling" ]
-build-backend = "hatchling.build"
 
 [project.optional-dependencies]
 dev = [
@@ -43,12 +43,13 @@ dev = [
     "flake8",
     "hatch",
     "isort",
+    "mist[cli]",
     "pytest",
     "pytest-cov",
     "pytest-mock",
     "twine"
 ]
-cli = ["matplotlib", "PyQt6", "typer", "ultralytics"]
+cli = ["typer", "ultralytics-opencv-headless"]
 
 [project.scripts]
 mist = "mist.cli:app"
