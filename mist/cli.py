@@ -95,6 +95,14 @@ def main(
             help="The device to use for inference. Use 'mps' for Apple Silicon.",
         ),
     ] = "cuda:0",
+    disable_tiled_inference: Annotated[
+        bool,
+        typer.Option(
+            "--no-tiled-inference/--tiled-inference",
+            "-N",
+            help="Disable tiling inference and run normal inference.",
+        ),
+    ] = False,
     dump_class_masks: Annotated[
         bool, typer.Option(help="Creates PNGs of class masks during merging.")
     ] = dump.DEFAULT_MASK_CLASS,
@@ -249,29 +257,32 @@ def main(
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
         src_img = utils.read_image_file(src)
-        detections = detecting.run(
-            src_img,
-            predict,
-            class_names=[name for _, name in sorted(model.names.items())],
-            dump_masks=dump.MaskConfiguration(
-                clazz=dump_class_masks,
-                data=dump_data_masks,
-                erode=dump_erosion_masks,
-                instance=dump_instance_masks,
-                to=dump_masks_to,
-            ),
-            erosion=erosion.Configuration(
-                enabled=erosion_enabled,
-                iterations=erosion_iterations,
-                size=erosion_size,
-            ),
-            merge_classes=merge_classes,
-            overlap_height=overlap_height,
-            overlap_width=overlap_width,
-            tile_height=tile_height,
-            tile_width=tile_width,
-            logger=LOGGER,
-        )
+        if disable_tiled_inference:
+            detections = predict(src_img)
+        else:
+            detections = detecting.run(
+                src_img,
+                predict,
+                class_names=[name for _, name in sorted(model.names.items())],
+                dump_masks=dump.MaskConfiguration(
+                    clazz=dump_class_masks,
+                    data=dump_data_masks,
+                    erode=dump_erosion_masks,
+                    instance=dump_instance_masks,
+                    to=dump_masks_to,
+                ),
+                erosion=erosion.Configuration(
+                    enabled=erosion_enabled,
+                    iterations=erosion_iterations,
+                    size=erosion_size,
+                ),
+                merge_classes=merge_classes,
+                overlap_height=overlap_height,
+                overlap_width=overlap_width,
+                tile_height=tile_height,
+                tile_width=tile_width,
+                logger=LOGGER,
+            )
         LOGGER.info("Detecting...DONE")
         if detections.is_empty():
             LOGGER.warning(f"No detections for the '{src}' image file")
