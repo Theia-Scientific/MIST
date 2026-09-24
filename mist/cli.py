@@ -290,7 +290,10 @@ def main(
             LOGGER.info("Saving...")
             annotator = sv.MaskAnnotator()
             annotated_image = annotator.annotate(src_img, detections)
-            img_dst = dst.joinpath(src.stem + "_mist.png")
+            if disable_tiled_inference:
+                img_dst = dst.joinpath(src.stem + "_nomist.png")
+            else:
+                img_dst = dst.joinpath(src.stem + "_mist.png")
             LOGGER.debug(f"{img_dst=}")
             result = cv2.imwrite(str(img_dst), annotated_image)
             LOGGER.debug(f"{result=}")
