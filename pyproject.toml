@@ -66,3 +66,6 @@ exclude_lines = [
     "@abc.abstractmethod"
 ]
 omit = [ "__main__.py" ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["mist"]
