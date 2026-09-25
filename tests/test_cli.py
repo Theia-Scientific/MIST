@@ -287,7 +287,7 @@ def test_app_help():
 
 
 def test_app_version():
-    version = importlib.metadata.version(__app_name__)
+    version = importlib.metadata.version("tsmist")
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
     assert f"{__app_name__} {version}" in result.stdout

@@ -3,7 +3,7 @@ requires = [ "hatchling" ]
 build-backend = "hatchling.build"
 
 [project]
-name = "mist"
+name = "tsmist"
 version = "0.1.0"
 description = "A Python Command Line Interface (CLI) application and package to run the Merging Instance Segmentation Tiler (MIST) with ML computer vision models"
 authors = [
@@ -12,7 +12,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
     "Environment :: GPU",
     "Framework :: Pydantic",
@@ -43,10 +43,10 @@ dev = [
     "flake8",
     "hatch",
     "isort",
-    "mist[cli]",
     "pytest",
     "pytest-cov",
     "pytest-mock",
+    "tsmist[cli]",
     "twine"
 ]
 cli = ["typer", "ultralytics-opencv-headless"]
@@ -62,7 +62,13 @@ Tracker = "https://github.com/Theia-Scientific/mist/issues"
 [tool.coverage.report]
 exclude_lines = [
     "if __name__ == .__main__.:",
-    "@abstractmethod",
-    "@abc.abstractmethod"
 ]
 omit = [ "__main__.py" ]
+
+[tool.flake8]
+ignore = ['E203', 'W503']
+max-line-length = 127
+max-complexity = 15
+
+[tool.hatch.build.targets.wheel]
+packages = ["mist"]

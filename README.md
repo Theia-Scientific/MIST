@@ -1,6 +1,9 @@
 # MIST: Merging Instance Segmentation Tiler
 
 [![CI](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml/badge.svg)](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Theia-Scientific/MIST/graph/badge.svg?token=jQlaknKYBC)](https://codecov.io/gh/Theia-Scientific/MIST)
+![PyPI Version](https://img.shields.io/pypi/v/tsmist)
+![GitHub Release](https://img.shields.io/github/v/release/Theia-Scientific/mist)
 
 A Command Line Interface (CLI) application and Python package for running the
 Merging Instance Segmentation Tiler (MIST) with Machine Learning (ML) computer
@@ -206,7 +209,7 @@ brew update && brew upgrade pipx
 2. Install `mist` command globally for all users.
 
    ```sh
-   sudo pipx install --global --python python3.11 "mist[cli]"
+   sudo pipx install --global --python python3.11 "tsmist[cli]"
    ```
    
 3. Verify `mist` command is available.
@@ -272,7 +275,7 @@ brew update && brew upgrade pipx
 1. Upgrade the `mist` application via `pipx`.
 
    ```sh
-   sudo pipx install --global --python python3.11 --force mist
+   sudo pipx install --global --python python3.11 --force tsmist
    ```
    
 2. Verify new version.

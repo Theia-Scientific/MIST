@@ -1,19 +1,21 @@
-name: Publish to Envelope.dev
+name: Publish to Python Package Indices
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*.*.*"
 
   workflow_dispatch:
 
 jobs:
-  envelope:
-    name: Upload release to Envelope.dev
+  pypi:
+    name: Upload release to the Python Package Index (PyPI)
     runs-on: ubuntu-latest
     environment: release
-
+    permissions:
+      id-token: write
     steps:
-      - name: Checkout
+      - name: Checkout source code
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -25,15 +27,10 @@ jobs:
           python-version: 3.11
 
       - name: Install build tools
-        run: python -m pip install --upgrade build
+        run: python3 -m pip install --upgrade build
 
       - name: Build wheel
-        run: python -m build
+        run: python3 -m build
 
       - name: Publish wheel
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          attestations: false
-          password: ${{ secrets.ENVELOPE_TOKEN }}
-          user: pypi
-          repository-url: https://app.envelope.dev/legacy/
