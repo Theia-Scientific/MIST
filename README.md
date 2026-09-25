@@ -1,6 +1,9 @@
 # MIST: Merging Instance Segmentation Tiler
 
 [![CI](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml/badge.svg)](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Theia-Scientific/mist/graph/badge.svg?token=warTkiP9QY)](https://codecov.io/gh/Theia-Scientific/mist)
+![PyPI Version](https://img.shields.io/pypi/v/tsmist)
+![GitHub Release](https://img.shields.io/github/v/release/Theia-Scientific/mist)
 
 A Command Line Interface (CLI) application and Python package for running the
 Merging Instance Segmentation Tiler (MIST) with Machine Learning (ML) computer
