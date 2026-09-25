@@ -1,7 +1,7 @@
 # MIST: Merging Instance Segmentation Tiler
 
 [![CI](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml/badge.svg)](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/Theia-Scientific/mist/graph/badge.svg?token=warTkiP9QY)](https://codecov.io/gh/Theia-Scientific/mist)
+[![codecov](https://codecov.io/gh/Theia-Scientific/MIST/graph/badge.svg?token=jQlaknKYBC)](https://codecov.io/gh/Theia-Scientific/MIST)
 ![PyPI Version](https://img.shields.io/pypi/v/tsmist)
 ![GitHub Release](https://img.shields.io/github/v/release/Theia-Scientific/mist)
 
