@@ -62,8 +62,6 @@ Tracker = "https://github.com/Theia-Scientific/mist/issues"
 [tool.coverage.report]
 exclude_lines = [
     "if __name__ == .__main__.:",
-    "@abstractmethod",
-    "@abc.abstractmethod"
 ]
 omit = [ "__main__.py" ]
 
