@@ -78,6 +78,22 @@ def dir_with_images_and_text(
 
 
 @pytest.fixture
+def class_names() -> list[str]:
+    return [
+        "bus",
+        "cat",
+        "dog",
+        "horse",
+        "bird",
+        "car",
+        "cellphone",
+        "tv",
+        "clock",
+        "person",
+    ]
+
+
+@pytest.fixture
 def mock_detecting_run(
     bus_class_ids: list[int], bus_masks: npt.NDArray[np.bool], mocker: MockerFixture
 ):
@@ -96,7 +112,6 @@ def mock_detecting_run(
     ) -> sv.Detections:
         _ = image
         _ = model
-        _ = class_names
         _ = dump_masks
         _ = erosion
         _ = logger
@@ -108,7 +123,7 @@ def mock_detecting_run(
 
         return sv.Detections(
             class_id=np.array(bus_class_ids),
-            confidence=None,
+            confidence=np.array([0.85 for _ in bus_class_ids]),
             data={
                 CLASS_NAME_DATA_FIELD: np.array(
                     [class_names[class_id] for class_id in bus_class_ids]
@@ -120,6 +135,33 @@ def mock_detecting_run(
         )
 
     _ = mocker.patch("mist.detecting.run", mock_detecting_run)
+
+
+@pytest.fixture
+def mock_predict(
+    bus_class_ids: list[int],
+    bus_masks: npt.NDArray[np.bool],
+    class_names: list[str],
+    mocker: MockerFixture,
+):
+
+    def mock_from_ultralytics(ultralytics_results: list[Results]) -> sv.Detections:
+        _ = ultralytics_results
+
+        return sv.Detections(
+            class_id=np.array(bus_class_ids),
+            confidence=np.array([0.85 for _ in bus_class_ids]),
+            data={
+                CLASS_NAME_DATA_FIELD: np.array(
+                    [class_names[class_id] for class_id in bus_class_ids]
+                ),
+            },
+            mask=bus_masks,
+            tracker_id=None,
+            xyxy=sv.mask_to_xyxy(bus_masks),
+        )
+
+    _ = mocker.patch("supervision.Detections.from_ultralytics", mock_from_ultralytics)
 
 
 @pytest.fixture
@@ -156,20 +198,9 @@ def mock_detecting_run_no_detections(mocker: MockerFixture):
 
 @pytest.fixture
 def mock_yolo(
+    class_names: list[str],
     mocker: MockerFixture,
 ):
-    class_names = [
-        "bus",
-        "cat",
-        "dog",
-        "horse",
-        "bird",
-        "car",
-        "cellphone",
-        "tv",
-        "clock",
-        "person",
-    ]
     names = {index: name for index, name in enumerate(class_names)}
     mock_names = mocker.patch(
         "ultralytics.YOLO.names", new_callable=mocker.PropertyMock
@@ -177,7 +208,10 @@ def mock_yolo(
     mock_names.return_value = names
 
     def mock_yolo_init(
-        self, model: str | Path, task: str | None = None, verbose: bool = False
+        self: ultralytics.YOLO,
+        model: str | Path,
+        task: str | None = None,
+        verbose: bool = False,
     ) -> None:
         _ = self
         _ = model
@@ -185,7 +219,10 @@ def mock_yolo(
         _ = verbose
 
     def mock_yolo_call(
-        self, source: npt.NDArray[np.uint8], stream: bool = False, **kwargs: Any
+        self: ultralytics.YOLO,
+        source: npt.NDArray[np.uint8],
+        stream: bool = False,
+        **kwargs: Any,
     ) -> list[Results]:
         _ = self
         _ = source
@@ -256,7 +293,7 @@ def test_app_version():
     assert f"{__app_name__} {version}" in result.stdout
 
 
-def test_app_image(
+def test_app_image_mist(
     bus_jpg: Path,
     mock_detecting_run: None,
     mock_yolo: None,
@@ -272,6 +309,56 @@ def test_app_image(
     assert result.exit_code == 0
     assert len(os.listdir(tmp_path)) == 1
     assert tmp_path.joinpath(bus_jpg.stem + "_mist.png").exists()
+
+
+def test_app_image_none(
+    bus_jpg: Path,
+    mock_predict: None,
+    mock_yolo: None,
+    tmp_path: Path,
+    weights_file: Path,
+):
+    _ = mock_predict
+    _ = mock_yolo
+    result = runner.invoke(
+        app,
+        [
+            "--device=cpu",
+            "--slicer=none",
+            "--output",
+            str(tmp_path),
+            str(weights_file),
+            str(bus_jpg),
+        ],
+    )
+    assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 1
+    assert tmp_path.joinpath(bus_jpg.stem + "_none.png").exists()
+
+
+def test_app_image_rf(
+    bus_jpg: Path,
+    mock_predict: None,
+    mock_yolo: None,
+    tmp_path: Path,
+    weights_file: Path,
+):
+    _ = mock_predict
+    _ = mock_yolo
+    result = runner.invoke(
+        app,
+        [
+            "--device=cpu",
+            "--slicer=rf",
+            "--output",
+            str(tmp_path),
+            str(weights_file),
+            str(bus_jpg),
+        ],
+    )
+    assert result.exit_code == 0
+    assert len(os.listdir(tmp_path)) == 1
+    assert tmp_path.joinpath(bus_jpg.stem + "_rf.png").exists()
 
 
 def test_app_image_yolo_no_results(

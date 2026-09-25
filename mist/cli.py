@@ -12,6 +12,7 @@ import typer
 import ultralytics
 import zipfile
 
+from enum import StrEnum
 from mist import __app_name__, detecting, dump, erosion, utils
 from natsort import natsorted
 from pathlib import Path
@@ -22,6 +23,12 @@ LOGGER: logging.Logger = logging.getLogger(__name__)
 PREFIX: str = f"{__app_name__.upper()}"
 
 app = typer.Typer(pretty_exceptions_show_locals=False)
+
+
+class Slicers(StrEnum):
+    MIST = "mist"
+    NONE = "none"
+    ROBOFLOW = "rf"
 
 
 class Result(BaseModel):
@@ -95,14 +102,6 @@ def main(
             help="The device to use for inference. Use 'mps' for Apple Silicon.",
         ),
     ] = "cuda:0",
-    disable_tiled_inference: Annotated[
-        bool,
-        typer.Option(
-            "--no-tiled-inference/--tiled-inference",
-            "-N",
-            help="Disable tiling inference and run normal inference.",
-        ),
-    ] = False,
     dump_class_masks: Annotated[
         bool, typer.Option(help="Creates PNGs of class masks during merging.")
     ] = dump.DEFAULT_MASK_CLASS,
@@ -204,6 +203,12 @@ def main(
             ),
         ),
     ] = detecting.DEFAULT_OVERLAP_WIDTH,
+    slicer: Annotated[
+        Slicers,
+        typer.Option(
+            help="The slicer to use for inference. The default is to use MIST."
+        ),
+    ] = Slicers.MIST,
     tile_height: Annotated[
         int, typer.Option(help="The height of a tile in pixels.")
     ] = detecting.DEFAULT_TILE_HEIGHT,
@@ -257,8 +262,10 @@ def main(
     for src in expand_sources(sources):
         LOGGER.info("Detecting...")
         src_img = utils.read_image_file(src)
-        if disable_tiled_inference:
+        if slicer == Slicers.NONE:
             detections = predict(src_img)
+        elif slicer == Slicers.ROBOFLOW:
+            detections = sv.InferenceSlicer(callback=predict)(src_img)
         else:
             detections = detecting.run(
                 src_img,
@@ -290,10 +297,7 @@ def main(
             LOGGER.info("Saving...")
             annotator = sv.MaskAnnotator()
             annotated_image = annotator.annotate(src_img, detections)
-            if disable_tiled_inference:
-                img_dst = dst.joinpath(src.stem + "_nomist.png")
-            else:
-                img_dst = dst.joinpath(src.stem + "_mist.png")
+            img_dst = dst.joinpath(src.stem + f"_{slicer.value}.png")
             LOGGER.debug(f"{img_dst=}")
             result = cv2.imwrite(str(img_dst), annotated_image)
             LOGGER.debug(f"{result=}")

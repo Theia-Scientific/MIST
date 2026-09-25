@@ -345,6 +345,8 @@ mist --device=mps yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
 Using an Ultralytics YOLO segmentation model and defaults.
 
 ```python
+import numpy as np
+import numpy.typing at npt
 import supervision as sv
 
 from mist import detecting
@@ -353,19 +355,19 @@ from ultralytics.models import YOLO
 
 model = YOLO(weights_file)
 
-def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
     return sv.Detections.from_ultralytics(
         model(
             image,
-            agnostic_nms=parameters.get("agnostic_nms", False),
-            device=parameters.get("device", "cuda:0"),
-            classes=parameters.get("classes", None),
-            conf=parameters.get("confidence", 0.35),
-            imgsz=parameters.get("image_size", 640),
-            iou=parameters.get("iou", 0.7),
-            max_det=parameters.get("maximum_detections", 1000),
-            retina_masks=parameters.get("retina_masks", True),
-            verbose=parameters.get("verbose", False),
+            agnostic_nms=False,
+            device="cuda:0",
+            classes=None
+            conf=0.35,
+            imgsz=640,
+            iou=0.7,
+            max_det=1000,
+            retina_masks=True,
+            verbose=False
         )[0]
     )
 
@@ -373,13 +375,6 @@ result = detecting.run(
     Path("/path/to/image.jpg"),
     predict,
     class_names=[name for _, name in sorted(model.names.items())],
-    parameters={
-        "confidence": inference_confidence,
-        "device": device,
-        "image_size": inference_image_size,
-        "iou": inference_iou,
-        "maximum_detections": inference_max_detections,
-    },
 )
 print(results)
 ```
@@ -388,13 +383,15 @@ Using a custom model.
 
 ```python
 import numpy as np
+import numpy.typing at npt
+import supervision as sv
 
 from mist import detecting
 from pathlib import Path
 
 model = CustomModel(weights_file)
 
-def predict(image: np.ndarray, parameters: Dict[str, Any]) -> sv.Detections:
+def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
     return sv.Detections.from_inference(model(image))
 
 results = detecting.run(
