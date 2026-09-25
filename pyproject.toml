@@ -52,7 +52,7 @@ dev = [
 cli = ["typer", "ultralytics-opencv-headless"]
 
 [project.scripts]
-tsmist = "mist.cli:app"
+mist = "mist.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/Theia-Scientific/mist"

@@ -116,9 +116,9 @@ Silicon processor.
 <a name="prerequisites-pipx"></a>
 
 The [pipx] utility enables distribution of Python-based CLI applications, like
-`tsmist`, to be installed for all users with all of the appropriate dependencies
+`mist`, to be installed for all users with all of the appropriate dependencies
 within an isolated environment. It is the recommended installation for the
-`tsmist` application.
+`mist` application.
 
 #### Ubuntu
 
@@ -203,17 +203,17 @@ brew update && brew upgrade pipx
    1.7.1
    ```
    
-2. Install `tsmist` command globally for all users.
+2. Install `mist` command globally for all users.
 
    ```sh
    sudo pipx install --global --python python3.11 "tsmist[cli]"
    ```
    
-3. Verify `tsmist` command is available.
+3. Verify `mist` command is available.
 
    ```sh
-   $ tsmist --version
-   tsmist 0.1.0
+   $ mist --version
+   mist 0.1.0
    ```
    
 ### Source
@@ -257,7 +257,7 @@ brew update && brew upgrade pipx
    ```
 
 5. Locally install the package, utility, and its dependencies. This will create
-   the `tsmist` command within the virtual environment. 
+   the `mist` command within the virtual environment. 
 
    ```sh
    python3 -m pip install -e ".[cli]"
@@ -269,7 +269,7 @@ brew update && brew upgrade pipx
 
 <a name="upgrade-pipx"></a>
 
-1. Upgrade the `tsmist` application via `pipx`.
+1. Upgrade the `mist` application via `pipx`.
 
    ```sh
    sudo pipx install --global --python python3.11 --force tsmist
@@ -278,8 +278,8 @@ brew update && brew upgrade pipx
 2. Verify new version.
 
    ```sh
-   $ tsmist --version
-   tsmist 0.1.0
+   $ mist --version
+   mist 0.1.0
    ```
    
 ### Source
@@ -307,7 +307,7 @@ brew update && brew upgrade pipx
    git pull
    ```
    
-4. Upgrade the `tsmist` application within the virtual environment.
+4. Upgrade the `mist` application within the virtual environment.
 
    ```sh
    python -m pip install --upgrade -e .
@@ -316,8 +316,8 @@ brew update && brew upgrade pipx
 5. Verify new version.
 
    ```sh
-   $ tsmist --version
-   tsmist 0.1.0
+   $ mist --version
+   mist 0.1.0
    ```
 
 ## Usage
@@ -329,13 +329,13 @@ brew update && brew upgrade pipx
 Using the Ultralytics YOLOv8 model:
 
 ```sh
-tsmist yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
+mist yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
 ```
 
 For running on macOS:
 
 ```sh
-tsmist --device=mps yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
+mist --device=mps yolov8n-seg.pt example1.jpg example2.jpg /path/to/images/dir
 ```
 
 ### Python
