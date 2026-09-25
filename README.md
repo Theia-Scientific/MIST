@@ -472,7 +472,13 @@ print(results)
 
 ## License
 
-Copyright (C) 2025-2026 Theia Scientific, LLC. All rights reserved.
+- [LICENSE](https://github.com/Theia-Scientific/mist/blob/main/LICENSE).
+
+## Acknowledgments
+
+This material is based upon work supported by the U.S. Department of Energy,
+Office of Science and Office of Nuclear Energy under Awards: DE-SC0021529 and
+DE-SC0021936, respectively.
 
 [dask_relabeling]: https://github.com/TheJacksonLaboratory/dask_relabeling
 [deadsnakes]: https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa
