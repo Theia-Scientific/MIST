@@ -177,7 +177,10 @@ def mock_yolo(
     mock_names.return_value = names
 
     def mock_yolo_init(
-        self, model: str | Path, task: str | None = None, verbose: bool = False
+        self: ultralytics.YOLO,
+        model: str | Path,
+        task: str | None = None,
+        verbose: bool = False,
     ) -> None:
         _ = self
         _ = model
@@ -185,7 +188,10 @@ def mock_yolo(
         _ = verbose
 
     def mock_yolo_call(
-        self, source: npt.NDArray[np.uint8], stream: bool = False, **kwargs: Any
+        self: ultralytics.YOLO,
+        source: npt.NDArray[np.uint8],
+        stream: bool = False,
+        **kwargs: Any,
     ) -> list[Results]:
         _ = self
         _ = source
