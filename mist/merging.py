@@ -29,8 +29,8 @@ def run(
     masks: list[Mask],
     src_image_size: tuple[int, int],
     tile_size: tuple[int, int],
-    erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
+    erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
     logger: logging.Logger = LOGGER,
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
 ) -> list[Instance]:
