@@ -13,6 +13,7 @@ from typing import Callable
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+DEFAULT_COMBINE_CLASSES: dict[int, list[int]] = {}
 DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
 DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
@@ -34,6 +35,7 @@ def run(
     img: npt.NDArray[np.uint8],
     model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
     class_names: list[str],
+    combine_classes: dict[int, list[int]] = DEFAULT_COMBINE_CLASSES,
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
     erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
     logger: logging.Logger = LOGGER,
@@ -45,6 +47,7 @@ def run(
 ) -> sv.Detections:
     logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
+    logger.debug(f"{combine_classes=}")
     logger.debug(f"{dump_masks=}")
     logger.debug(f"{erosion=}")
     logger.debug(f"{merge_classes=}")
@@ -93,6 +96,7 @@ def run(
         masks,
         orig_size,
         (tile_width, tile_height),
+        combine_classes=combine_classes,
         erosion=erosion,
         dump_masks=dump_masks,
         merge_classes=merge_classes,

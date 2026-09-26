@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
+DEFAULT_COMBINE_CLASSES: dict[int, list[int]] = {}
 DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
 DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
@@ -29,6 +30,7 @@ def run(
     masks: list[Mask],
     src_image_size: tuple[int, int],
     tile_size: tuple[int, int],
+    combine_classes: dict[int, list[int]] = DEFAULT_COMBINE_CLASSES,
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
     erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
     logger: logging.Logger = LOGGER,
@@ -38,7 +40,9 @@ def run(
     logger.debug(f"{masks=}")
     logger.debug(f"{src_image_size=}")
     logger.debug(f"{tile_size=}")
+    logger.debug(f"{combine_classes=}")
     logger.debug(f"{dump_masks=}")
+    logger.debug(f"{erosion=}")
     logger.debug(f"{merge_classes=}")
     tile_width, tile_height = tile_size
     src_image_width, src_image_height = src_image_size
@@ -53,7 +57,7 @@ def run(
         logger.debug(f"{cls_index=}")
         cls_index_int = int(cls_index.item())
         logger.debug(f"{cls_index_int=}")
-        if (cls_index in merge_classes and len(merge_classes) > 0) or len(
+        if (cls_index_int in merge_classes and len(merge_classes) > 0) or len(
             merge_classes
         ) == 0:
             if dump_masks.enabled:
