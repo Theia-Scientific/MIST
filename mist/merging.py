@@ -26,7 +26,7 @@ class Mask(BaseModel, arbitrary_types_allowed=True):
 
 
 def run(
-    class_indices: list[int],
+    class_ids: list[int],
     masks: list[Mask],
     src_image_size: tuple[int, int],
     tile_size: tuple[int, int],
@@ -36,7 +36,7 @@ def run(
     logger: logging.Logger = LOGGER,
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
 ) -> list[Instance]:
-    logger.debug(f"{class_indices=}")
+    logger.debug(f"{class_ids=}")
     logger.debug(f"{masks=}")
     logger.debug(f"{src_image_size=}")
     logger.debug(f"{tile_size=}")
@@ -46,24 +46,28 @@ def run(
     logger.debug(f"{merge_classes=}")
     tile_width, tile_height = tile_size
     src_image_width, src_image_height = src_image_size
-    tensor_class_indices = torch.tensor(class_indices)
     instance_id = 0
     instances: list[Instance] = []
     if erosion.enabled:
         erosion_kernel = np.ones((erosion.size, erosion.size), np.uint8)
     else:
         erosion_kernel = None
-    for cls_index in torch.unique(tensor_class_indices):
-        logger.debug(f"{cls_index=}")
-        cls_index_int = int(cls_index.item())
-        logger.debug(f"{cls_index_int=}")
-        if (cls_index_int in merge_classes and len(merge_classes) > 0) or len(
+    for cls_id in set(class_ids):
+        logger.debug(f"{cls_id=}")
+        if (cls_id in merge_classes and len(merge_classes) > 0) or len(
             merge_classes
         ) == 0:
             if dump_masks.enabled:
-                os.makedirs(dump_masks.to.joinpath(str(cls_index_int)), exist_ok=True)
-            cls_indexes = torch.where(tensor_class_indices == cls_index)[0]
-            class_masks = [masks[i] for i in cls_indexes]
+                os.makedirs(dump_masks.to.joinpath(str(cls_id)), exist_ok=True)
+            combined_class_ids = combine_classes.get(cls_id, [])
+            combined_class_ids.append(cls_id)
+            logger.debug(f"{combined_class_ids=}")
+            where_result = torch.where(
+                torch.isin(torch.tensor(class_ids), torch.tensor(combined_class_ids))
+            )
+            logger.debug(f"{where_result=}")
+            cls_indices = where_result[0]
+            class_masks = [masks[i] for i in cls_indices]
             logger.debug(f"{len(class_masks)=}")
             class_mask = np.zeros((src_image_height, src_image_width))
             logger.debug(f"{class_mask.shape=}")
@@ -76,18 +80,16 @@ def run(
                         erosion_kernel,
                         iterations=erosion.iterations,
                     )
-                    _ = dump_masks.write_erode(erode_img, cls_index_int, i)
+                    _ = dump_masks.write_erode(erode_img, cls_id, i)
                     mask_data = erode_img.astype(bool)
                 class_mask[
                     mask.offset_y : mask.offset_y + tile_height,
                     mask.offset_x : mask.offset_x + tile_width,
                 ] += mask_data
-                _ = dump_masks.write_class(
-                    class_mask.astype(np.uint8), cls_index_int, i
-                )
+                _ = dump_masks.write_class(class_mask.astype(np.uint8), cls_id, i)
                 _ = dump_masks.write_data(
                     mask.data.astype(np.uint8),
-                    cls_index_int,
+                    cls_id,
                     i,
                 )
             class_mask = class_mask.astype(np.uint8)
@@ -101,10 +103,10 @@ def run(
                     (src_image_height, src_image_width), dtype=np.uint8
                 )
                 _ = cv2.fillPoly(instance_mask, [contour], 1)
-                _ = dump_masks.write_instance(instance_mask, cls_index_int, instance_id)
+                _ = dump_masks.write_instance(instance_mask, cls_id, instance_id)
                 instance = Instance(
                     box=[x, y, x + w, y + h],
-                    class_index=cls_index_int,
+                    class_index=cls_id,
                     id=instance_id,
                     mask=instance_mask.astype(np.bool),
                 )
