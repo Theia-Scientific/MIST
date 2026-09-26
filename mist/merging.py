@@ -5,7 +5,6 @@ import logging
 import numpy as np
 import numpy.typing as npt
 import os
-import torch
 
 from mist import dump, erosion
 from mist.instances import Instance
@@ -62,11 +61,11 @@ def run(
             combined_class_ids = combine_classes.get(cls_id, [])
             combined_class_ids.append(cls_id)
             logger.debug(f"{combined_class_ids=}")
-            where_result = torch.where(
-                torch.isin(torch.tensor(class_ids), torch.tensor(combined_class_ids))
+            result = np.nonzero(
+                np.isin(np.array(class_ids), np.array(combined_class_ids))
             )
-            logger.debug(f"{where_result=}")
-            cls_indices = where_result[0]
+            logger.debug(f"{result=}")
+            cls_indices = result[0]
             class_masks = [masks[i] for i in cls_indices]
             logger.debug(f"{len(class_masks)=}")
             class_mask = np.zeros((src_image_height, src_image_width))
