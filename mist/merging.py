@@ -25,7 +25,7 @@ class Mask(BaseModel, arbitrary_types_allowed=True):
 
 
 def run(
-    class_ids: list[int],
+    class_ids: npt.NDArray[int],
     masks: list[Mask],
     src_image_size: tuple[int, int],
     tile_size: tuple[int, int],
@@ -51,7 +51,7 @@ def run(
         erosion_kernel = np.ones((erosion.size, erosion.size), np.uint8)
     else:
         erosion_kernel = None
-    for cls_id in set(class_ids):
+    for cls_id in np.unique(class_ids):
         logger.debug(f"{cls_id=}")
         if (cls_id in merge_classes and len(merge_classes) > 0) or len(
             merge_classes
