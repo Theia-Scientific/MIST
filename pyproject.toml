@@ -28,6 +28,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Recognition",
 ]
 dependencies = [
+    "numpy",
     "opencv-python-headless",
     "pydantic",
     "supervision>=0.30",
