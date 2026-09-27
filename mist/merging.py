@@ -24,6 +24,27 @@ class Mask(BaseModel, arbitrary_types_allowed=True):
     offset_y: int
 
 
+def flatten_groups(
+    class_id: int, groups: list[list[int]], logger: logging.Logger = LOGGER
+) -> list[int]:
+    logger.debug(f"{class_id=}")
+    logger.debug(f"{groups=}")
+    group_cls_ids = [c for group in groups for c in group if class_id in group]
+    group_cls_ids.append(class_id)
+    logger.debug(f"{group_cls_ids=}")
+    return list(set(group_cls_ids))
+
+
+def find_class_indices(
+    class_ids: list[int], group_cls_ids: list[int], logger: logging.Logger = LOGGER
+) -> list[int]:
+    logger.debug(f"{class_ids=}")
+    logger.debug(f"{group_cls_ids=}")
+    result = np.nonzero(np.isin(np.array(class_ids), np.array(group_cls_ids)))
+    logger.debug(f"{result=}")
+    return [int(i) for i in result[0]]
+
+
 def run(
     class_ids: list[int],
     masks: list[Mask],
@@ -58,16 +79,10 @@ def run(
         ) == 0:
             if dump_masks.enabled:
                 os.makedirs(dump_masks.to.joinpath(str(cls_id)), exist_ok=True)
-            group_cls_ids = [
-                cls_id for group in groups for cls_id in group if cls_id in group
-            ]
+            group_cls_ids = [c for group in groups for c in group if cls_id in group]
             group_cls_ids.append(cls_id)
             logger.debug(f"{group_cls_ids=}")
-            result = np.nonzero(
-                np.isin(np.array(class_ids), np.array(set(group_cls_ids)))
-            )
-            logger.debug(f"{result=}")
-            cls_indices = result[0]
+            cls_indices = find_class_indices(class_ids, flatten_groups(cls_id, groups))
             class_masks = [masks[i] for i in cls_indices]
             logger.debug(f"{len(class_masks)=}")
             class_mask = np.zeros((src_image_height, src_image_width))
