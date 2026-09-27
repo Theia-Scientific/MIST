@@ -353,22 +353,24 @@ from mist import detecting
 from pathlib import Path
 from ultralytics.models import YOLO
 
-model = YOLO(weights_file)
+model = YOLO("yolo26n-seg.pt")
 
 
 def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
     return sv.Detections.from_ultralytics(
-        model(
-            image,
-            agnostic_nms=False,
-            device="cuda:0",
-            classes=None,
-            conf=0.35,
-            imgsz=640,
-            iou=0.7,
-            max_det=1000,
-            retina_masks=True,
-            verbose=False
+        list(
+            model(
+                image,
+                agnostic_nms=False,
+                device="cuda:0",
+                classes=None,
+                conf=0.35,
+                imgsz=640,
+                iou=0.7,
+                max_det=1000,
+                retina_masks=True,
+                verbose=False
+            )
         )[0]
     )
 
