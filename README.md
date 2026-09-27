@@ -355,6 +355,7 @@ from ultralytics.models import YOLO
 
 model = YOLO(weights_file)
 
+
 def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
     return sv.Detections.from_ultralytics(
         model(
@@ -370,9 +371,10 @@ def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
             verbose=False
         )[0]
     )
+    
 
 result = detecting.run(
-    Path("/path/to/image.jpg"),
+    np.zeros((3, 4096, 4096), dtype=np.uint8),
     predict,
     class_names=[name for _, name in sorted(model.names.items())],
 )
@@ -391,11 +393,13 @@ from pathlib import Path
 
 model = CustomModel(weights_file)
 
+
 def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
     return sv.Detections.from_inference(model(image))
 
+
 results = detecting.run(
-    Path("/path/to/image.jpg"), 
+    np.zeros((3, 4096, 4096), dtype=np.uint8),
     predict,
     class_names=["object"]
 )
