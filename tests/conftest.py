@@ -87,7 +87,7 @@ def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
         for line in txt:
             current_line = line.strip()
             data = current_line.split(" ")
-            data.pop(0)
+            _ = data.pop(0)
             polygon = np.array(
                 [
                     [
