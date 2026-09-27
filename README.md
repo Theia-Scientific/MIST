@@ -383,7 +383,7 @@ Using a custom model.
 
 ```python
 import numpy as np
-import numpy.typing at npt
+import numpy.typing as npt
 import supervision as sv
 
 from mist import detecting
