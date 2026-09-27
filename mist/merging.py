@@ -82,7 +82,9 @@ def run(
             group_cls_ids = [c for group in groups for c in group if cls_id in group]
             group_cls_ids.append(cls_id)
             logger.debug(f"{group_cls_ids=}")
-            cls_indices = find_class_indices(class_ids, flatten_groups(cls_id, groups))
+            cls_indices = find_class_indices(
+                class_ids, flatten_groups(cls_id, groups, logger=logger), logger=logger
+            )
             class_masks = [masks[i] for i in cls_indices]
             logger.debug(f"{len(class_masks)=}")
             class_mask = np.zeros((src_image_height, src_image_width))
