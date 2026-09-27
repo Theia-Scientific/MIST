@@ -178,7 +178,7 @@ def main(
         typer.Option(
             "--merge-class",
             "-c",
-            help="Only merge instances with these class indices.",
+            help="Only merge instances with these class IDs.",
         ),
     ] = detecting.DEFAULT_MERGE_CLASSES,
     output: Annotated[
