@@ -19,6 +19,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Annotated
 
+DEFAULT_GROUPS: list[str] = []
 LOGGER: logging.Logger = logging.getLogger(__name__)
 PREFIX: str = f"{__app_name__.upper()}"
 
@@ -87,6 +88,10 @@ def expand_sources(sources: list[Path]) -> list[Path]:
     return expanded_sources
 
 
+def parse_group(raw: str) -> list[int]:
+    return [int(s) for s in raw.split(",")]
+
+
 @app.command()
 def main(
     weights_file: Annotated[
@@ -149,9 +154,13 @@ def main(
         ),
     ] = erosion.DEFAULT_SIZE,
     groups: Annotated[
-        list[list[int]],
-        typer.Option("--group", "-g", help="Treat these class IDs as a single class."),
-    ] = detecting.DEFAULT_GROUPS,
+        list[str],
+        typer.Option(
+            "--group",
+            "-g",
+            help="Treat these class IDs as a single class.",
+        ),
+    ] = DEFAULT_GROUPS,
     inference_confidence: Annotated[
         float,
         typer.Option(
@@ -287,7 +296,7 @@ def main(
                     iterations=erosion_iterations,
                     size=erosion_size,
                 ),
-                groups=groups,
+                groups=[parse_group(group) for group in groups],
                 merge_classes=merge_classes,
                 overlap_height=overlap_height,
                 overlap_width=overlap_width,

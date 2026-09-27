@@ -17,6 +17,7 @@ from mist.cli import (
     app,
     expand_sources,
     map_verbosity,
+    parse_group,
 )
 from pathlib import Path
 from pytest_mock import MockerFixture
@@ -103,6 +104,7 @@ def mock_detecting_run(
         class_names: list[str],
         dump_masks: dump.MaskConfiguration,
         erosion: erosion.Configuration,
+        groups: list[list[int]],
         logger: logging.Logger,
         merge_classes: list[int],
         overlap_height: float,
@@ -114,6 +116,7 @@ def mock_detecting_run(
         _ = model
         _ = dump_masks
         _ = erosion
+        _ = groups
         _ = logger
         _ = merge_classes
         _ = overlap_height
@@ -172,6 +175,7 @@ def mock_detecting_run_no_detections(mocker: MockerFixture):
         class_names: list[str],
         dump_masks: dump.MaskConfiguration,
         erosion: erosion.Configuration,
+        groups: list[list[int]],
         logger: logging.Logger,
         merge_classes: list[int],
         overlap_height: float,
@@ -184,6 +188,7 @@ def mock_detecting_run_no_detections(mocker: MockerFixture):
         _ = class_names
         _ = dump_masks
         _ = erosion
+        _ = groups
         _ = logger
         _ = merge_classes
         _ = overlap_height
@@ -233,6 +238,12 @@ def mock_yolo(
 
     _ = mocker.patch.object(ultralytics.YOLO, "__init__", mock_yolo_init)
     _ = mocker.patch.object(ultralytics.YOLO, "__call__", mock_yolo_call)
+
+
+def test_parse_group():
+    result = parse_group("1,2,3")
+    assert len(result) == 3
+    assert result == [1, 2, 3]
 
 
 def test_map_verbosity():
