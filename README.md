@@ -362,7 +362,7 @@ def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
             image,
             agnostic_nms=False,
             device="cuda:0",
-            classes=None
+            classes=None,
             conf=0.35,
             imgsz=640,
             iou=0.7,
