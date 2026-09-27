@@ -12,8 +12,8 @@ from pydantic import BaseModel
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-DEFAULT_COMBINE_CLASSES: dict[int, list[int]] = {}
 DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
+DEFAULT_GROUPS: list[list[int]] = []
 DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
 
@@ -29,9 +29,9 @@ def run(
     masks: list[Mask],
     src_image_size: tuple[int, int],
     tile_size: tuple[int, int],
-    combine_classes: dict[int, list[int]] = DEFAULT_COMBINE_CLASSES,
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
     erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
+    groups: list[list[int]] = DEFAULT_GROUPS,
     logger: logging.Logger = LOGGER,
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
 ) -> list[Instance]:
@@ -39,9 +39,9 @@ def run(
     logger.debug(f"{masks=}")
     logger.debug(f"{src_image_size=}")
     logger.debug(f"{tile_size=}")
-    logger.debug(f"{combine_classes=}")
     logger.debug(f"{dump_masks=}")
     logger.debug(f"{erosion=}")
+    logger.debug(f"{groups=}")
     logger.debug(f"{merge_classes=}")
     tile_width, tile_height = tile_size
     src_image_width, src_image_height = src_image_size
@@ -58,11 +58,13 @@ def run(
         ) == 0:
             if dump_masks.enabled:
                 os.makedirs(dump_masks.to.joinpath(str(cls_id)), exist_ok=True)
-            combined_class_ids = combine_classes.get(cls_id, [])
-            combined_class_ids.append(cls_id)
-            logger.debug(f"{combined_class_ids=}")
+            group_cls_ids = [
+                cls_id for group in groups for cls_id in group if cls_id in group
+            ]
+            group_cls_ids.append(cls_id)
+            logger.debug(f"{group_cls_ids=}")
             result = np.nonzero(
-                np.isin(np.array(class_ids), np.array(combined_class_ids))
+                np.isin(np.array(class_ids), np.array(set(group_cls_ids)))
             )
             logger.debug(f"{result=}")
             cls_indices = result[0]

@@ -13,8 +13,8 @@ from typing import Callable
 
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
-DEFAULT_COMBINE_CLASSES: dict[int, list[int]] = {}
 DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
+DEFAULT_GROUPS: list[list[int]] = []
 DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
@@ -35,9 +35,9 @@ def run(
     img: npt.NDArray[np.uint8],
     model: Callable[[npt.NDArray[np.uint8]], sv.Detections],
     class_names: list[str],
-    combine_classes: dict[int, list[int]] = DEFAULT_COMBINE_CLASSES,
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
     erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
+    groups: list[list[int]] = DEFAULT_GROUPS,
     logger: logging.Logger = LOGGER,
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
@@ -47,9 +47,9 @@ def run(
 ) -> sv.Detections:
     logger.debug(f"{img=}")
     logger.debug(f"{class_names=}")
-    logger.debug(f"{combine_classes=}")
     logger.debug(f"{dump_masks=}")
     logger.debug(f"{erosion=}")
+    logger.debug(f"{groups=}")
     logger.debug(f"{merge_classes=}")
     logger.debug(f"{overlap_height=}")
     logger.debug(f"{overlap_width=}")
@@ -96,9 +96,9 @@ def run(
         masks,
         orig_size,
         (tile_width, tile_height),
-        combine_classes=combine_classes,
-        erosion=erosion,
         dump_masks=dump_masks,
+        erosion=erosion,
+        groups=groups,
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")
