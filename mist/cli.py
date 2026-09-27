@@ -158,7 +158,12 @@ def main(
         typer.Option(
             "--group",
             "-g",
-            help="Treat these class IDs as a single class.",
+            help=(
+                "Treat these class IDs as a single class. A groupd is created "
+                "with a comma-delimited list of class IDs, e.g., '--group=1,5,9'. "
+                "Multiple groups can be created by specifying the '-g,--group' option "
+                "multiple times."
+            ),
         ),
     ] = DEFAULT_GROUPS,
     inference_confidence: Annotated[
