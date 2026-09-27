@@ -371,7 +371,7 @@ def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
             verbose=False
         )[0]
     )
-    
+
 
 result = detecting.run(
     np.zeros((3, 4096, 4096), dtype=np.uint8),
