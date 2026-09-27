@@ -148,6 +148,10 @@ def main(
             ),
         ),
     ] = erosion.DEFAULT_SIZE,
+    groups: Annotated[
+        list[list[int]],
+        typer.Option("--group", "-g", help="Treat these class IDs as a single class."),
+    ] = detecting.DEFAULT_GROUPS,
     inference_confidence: Annotated[
         float,
         typer.Option(
@@ -283,6 +287,7 @@ def main(
                     iterations=erosion_iterations,
                     size=erosion_size,
                 ),
+                groups=groups,
                 merge_classes=merge_classes,
                 overlap_height=overlap_height,
                 overlap_width=overlap_width,
