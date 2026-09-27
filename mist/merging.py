@@ -25,7 +25,7 @@ class Mask(BaseModel, arbitrary_types_allowed=True):
 
 
 def run(
-    class_ids: npt.NDArray[np.int32],
+    class_ids: npt.NDArray[np.integer],
     masks: list[Mask],
     src_image_size: tuple[int, int],
     tile_size: tuple[int, int],

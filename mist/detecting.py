@@ -69,14 +69,10 @@ def run(
     )
     logger.info("Creating tiles...DONE")
     masks: list[merging.Mask] = []
-    class_indices: list[int] = []
+    detections = sv.Detections.empty()
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
         detections = model(tile.img)
-        if detections.class_id is None:
-            class_indices.extend([0 for _ in range(len(detections))])
-        else:
-            class_indices.extend(list(detections.class_id))
         if detections.mask is None:
             masks_data = np.zeros(
                 (len(detections), tile_height, tile_width), dtype=bool
@@ -92,7 +88,11 @@ def run(
         logger.info(f"Running inference on {index} tile...DONE")
     logger.info("Merging results...")
     instances = merging.run(
-        class_indices,
+        (
+            np.zeros(len(detections), dtype=np.integer)
+            if detections.class_id is None
+            else detections.class_id
+        ),
         masks,
         orig_size,
         (tile_width, tile_height),
