@@ -14,6 +14,7 @@ from typing import Callable
 LOGGER: logging.Logger = logging.getLogger(__name__)
 
 DEFAULT_EROSION_CONFIGURATION: erosion.Configuration = erosion.Configuration()
+DEFAULT_GROUPS: list[list[int]] = []
 DEFAULT_MASK_CONFIGURATION: dump.MaskConfiguration = dump.MaskConfiguration()
 DEFAULT_MERGE_CLASSES: list[int] = []
 DEFAULT_OVERLAP_HEIGHT: float = 0.2
@@ -36,6 +37,7 @@ def run(
     class_names: list[str],
     dump_masks: dump.MaskConfiguration = DEFAULT_MASK_CONFIGURATION,
     erosion: erosion.Configuration = DEFAULT_EROSION_CONFIGURATION,
+    groups: list[list[int]] = DEFAULT_GROUPS,
     logger: logging.Logger = LOGGER,
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
     overlap_height: float = DEFAULT_OVERLAP_HEIGHT,
@@ -47,6 +49,7 @@ def run(
     logger.debug(f"{class_names=}")
     logger.debug(f"{dump_masks=}")
     logger.debug(f"{erosion=}")
+    logger.debug(f"{groups=}")
     logger.debug(f"{merge_classes=}")
     logger.debug(f"{overlap_height=}")
     logger.debug(f"{overlap_width=}")
@@ -65,15 +68,15 @@ def run(
         tile_size=(tile_width, tile_height),
     )
     logger.info("Creating tiles...DONE")
+    class_ids: list[int] = []
     masks: list[merging.Mask] = []
-    class_indices: list[int] = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
         detections = model(tile.img)
         if detections.class_id is None:
-            class_indices.extend([0 for _ in range(len(detections))])
+            class_ids = [0 for _ in range(len(detections))]
         else:
-            class_indices.extend(list(detections.class_id))
+            class_ids = list(detections.class_id)
         if detections.mask is None:
             masks_data = np.zeros(
                 (len(detections), tile_height, tile_width), dtype=bool
@@ -89,16 +92,17 @@ def run(
         logger.info(f"Running inference on {index} tile...DONE")
     logger.info("Merging results...")
     instances = merging.run(
-        class_indices,
+        class_ids,
         masks,
         orig_size,
         (tile_width, tile_height),
-        erosion=erosion,
         dump_masks=dump_masks,
+        erosion=erosion,
+        groups=groups,
         merge_classes=merge_classes,
     )
     logger.info("Merging results...DONE")
-    all_class_names = [class_names[i] for i in class_indices]
+    all_class_names = [class_names[i] for i in class_ids]
     logger.debug(f"{all_class_names=}")
     instance_class_names = [class_names[i.class_index] for i in instances]
     logger.debug(f"{instance_class_names=}")

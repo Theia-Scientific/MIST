@@ -349,33 +349,37 @@ Using an Ultralytics YOLO segmentation model and defaults.
 
 ```python
 import numpy as np
-import numpy.typing at npt
+import numpy.typing as npt
 import supervision as sv
 
 from mist import detecting
 from pathlib import Path
 from ultralytics.models import YOLO
 
-model = YOLO(weights_file)
+model = YOLO("yolo26n-seg.pt")
+
 
 def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
     return sv.Detections.from_ultralytics(
-        model(
-            image,
-            agnostic_nms=False,
-            device="cuda:0",
-            classes=None
-            conf=0.35,
-            imgsz=640,
-            iou=0.7,
-            max_det=1000,
-            retina_masks=True,
-            verbose=False
+        list(
+            model(
+                image,
+                agnostic_nms=False,
+                device="cuda:0",
+                classes=None,
+                conf=0.35,
+                imgsz=640,
+                iou=0.7,
+                max_det=1000,
+                retina_masks=True,
+                verbose=False
+            )
         )[0]
     )
 
+
 result = detecting.run(
-    Path("/path/to/image.jpg"),
+    np.zeros((3, 4096, 4096), dtype=np.uint8),
     predict,
     class_names=[name for _, name in sorted(model.names.items())],
 )
@@ -386,7 +390,7 @@ Using a custom model.
 
 ```python
 import numpy as np
-import numpy.typing at npt
+import numpy.typing as npt
 import supervision as sv
 
 from mist import detecting
@@ -394,11 +398,13 @@ from pathlib import Path
 
 model = CustomModel(weights_file)
 
+
 def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
     return sv.Detections.from_inference(model(image))
 
+
 results = detecting.run(
-    Path("/path/to/image.jpg"), 
+    np.zeros((3, 4096, 4096), dtype=np.uint8),
     predict,
     class_names=["object"]
 )

@@ -28,12 +28,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Image Recognition",
 ]
 dependencies = [
-    "imagecodecs",
-    "natsort",
+    "numpy",
     "opencv-python-headless",
     "pydantic",
     "supervision>=0.30",
-    "tifffile",
 ]
 
 [project.optional-dependencies]
@@ -49,7 +47,13 @@ dev = [
     "tsmist[cli]",
     "twine"
 ]
-cli = ["typer", "ultralytics-opencv-headless"]
+cli = [
+  "imagecodecs",
+  "natsort",
+  "typer",
+  "ultralytics-opencv-headless",
+  "tifffile"
+]
 
 [project.scripts]
 mist = "mist.cli:app"
