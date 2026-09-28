@@ -48,7 +48,7 @@ def map_verbosity(count: int) -> str:
 
 def version_callback(value: bool):
     if value:
-        version = importlib.metadata.version(__app_name__)
+        version = importlib.metadata.version("tsmist")
         print(f"{__app_name__} {version}")
         raise typer.Exit()
 

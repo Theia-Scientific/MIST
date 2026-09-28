@@ -12,7 +12,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
-        python-version: ["3.11", "3.12", "3.13"]
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
     timeout-minutes: 10
     runs-on: ${{ matrix.os }}
 
@@ -41,4 +41,9 @@ jobs:
 
       - name: Test with pytest
         run: |
-          pytest --color=yes --cov=mist --cov-report=term-missing
+          pytest --color=yes --cov=mist --cov-branch --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
