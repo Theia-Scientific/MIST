@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml/badge.svg)](https://github.com/Theia-Scientific/mist/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/Theia-Scientific/MIST/graph/badge.svg?token=jQlaknKYBC)](https://codecov.io/gh/Theia-Scientific/MIST)
-![PyPI Version](https://img.shields.io/pypi/v/tsmist)
-![GitHub Release](https://img.shields.io/github/v/release/Theia-Scientific/mist)
+[![PyPI Version](https://img.shields.io/pypi/v/tsmist)](https://pypi.org/project/tsmist/)
+[![GitHub Release](https://img.shields.io/github/v/release/Theia-Scientific/mist)](https://github.com/Theia-Scientific/MIST/releases)
 
 A Command Line Interface (CLI) application and Python package for running the
 Merging Instance Segmentation Tiler (MIST) with Machine Learning (ML) computer
