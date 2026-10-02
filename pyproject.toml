@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "tsmist"
-version = "0.1.0"
+version = "1.0.0"
 description = "A Python Command Line Interface (CLI) application and package to run the Merging Instance Segmentation Tiler (MIST) with ML computer vision models"
 authors = [
     {name = "Christopher Field", email = "chris.field@theiascientific.com"},
