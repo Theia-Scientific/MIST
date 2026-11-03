@@ -116,7 +116,7 @@ def run(
                     [instance.id for instance in instances]
                 ),
             },
-            mask=(np.array([instance.mask for instance in instances])),
+            mask=np.array([instance.mask for instance in instances]),
             metadata={
                 STATS_METADATA_FIELD: Stats(
                     merged=Counter(instance_class_names),
