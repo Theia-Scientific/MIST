@@ -67,12 +67,14 @@ def run(
         overlap=(overlap_width, overlap_height),
         tile_size=(tile_width, tile_height),
     )
+    logger.debug(f"{len(tiles)=}")
     logger.info("Creating tiles...DONE")
     class_ids: list[int] = []
     masks: list[merging.Mask] = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
         detections = model(tile.img)
+        logger.debug(f"{len(detections)=}")
         if detections.class_id is None:
             class_ids = [0 for _ in range(len(detections))]
         else:
