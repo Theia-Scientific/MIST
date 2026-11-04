@@ -18,6 +18,10 @@ def test_run(bus_image: npt.NDArray[np.uint8], model: Model):
     predict, class_names = model
     detections = run(bus_image, predict, class_names)
     assert detections is not None
+    assert len(detections) == 14
+    assert detections.class_id is not None
+    assert detections.mask is not None
+    assert detections.xyxy is not None
 
 
 def test_run_with_no_predictions(

@@ -76,9 +76,10 @@ def run(
         detections = model(tile.img)
         logger.debug(f"{len(detections)=}")
         if detections.class_id is None:
-            class_ids = [0 for _ in range(len(detections))]
+            class_ids_data = [0 for _ in range(len(detections))]
         else:
-            class_ids = list(detections.class_id)
+            class_ids_data = list(detections.class_id)
+        class_ids.extend(class_ids_data)
         if detections.mask is None:
             masks_data = np.zeros(
                 (len(detections), tile_height, tile_width), dtype=bool
