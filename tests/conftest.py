@@ -72,6 +72,22 @@ def bus_class_ids(bus_txt: Path) -> list[int]:
 
 
 @pytest.fixture
+def bus_class_names() -> list[str]:
+    return [
+        "bus",
+        "cat",
+        "dog",
+        "horse",
+        "bird",
+        "car",
+        "cellphone",
+        "tv",
+        "clock",
+        "person",
+    ]
+
+
+@pytest.fixture
 def bus_image(bus_jpg: Path) -> npt.NDArray[np.uint8]:
     img = cv2.imread(bus_jpg)
     assert img is not None
@@ -107,20 +123,10 @@ def bus_masks(bus_txt: Path) -> npt.NDArray[np.bool]:
 
 @pytest.fixture
 def model(
-    bus_class_ids: list[int], bus_masks: npt.NDArray[np.bool]
+    bus_class_ids: list[int],
+    bus_class_names: list[str],
+    bus_masks: npt.NDArray[np.bool],
 ) -> tuple[Callable[[npt.NDArray[np.uint8]], sv.Detections], list[str]]:
-    class_names = [
-        "bus",
-        "cat",
-        "dog",
-        "horse",
-        "bird",
-        "car",
-        "cellphone",
-        "tv",
-        "clock",
-        "person",
-    ]
 
     def predict(image: npt.NDArray[np.uint8]) -> sv.Detections:
         _ = image
@@ -130,7 +136,7 @@ def model(
             confidence=None,
             data={
                 CLASS_NAME_DATA_FIELD: np.array(
-                    [class_names[class_id] for class_id in bus_class_ids]
+                    [bus_class_names[class_id] for class_id in bus_class_ids]
                 ),
             },
             mask=bus_masks,
@@ -138,7 +144,7 @@ def model(
             xyxy=sv.mask_to_xyxy(bus_masks),
         )
 
-    return predict, class_names
+    return predict, bus_class_names
 
 
 @pytest.fixture

@@ -57,7 +57,7 @@ def run(
     merge_classes: list[int] = DEFAULT_MERGE_CLASSES,
 ) -> list[Instance]:
     logger.debug(f"{class_ids=}")
-    logger.debug(f"{masks=}")
+    logger.debug(f"{len(masks)=}")
     logger.debug(f"{src_image_size=}")
     logger.debug(f"{tile_size=}")
     logger.debug(f"{dump_masks=}")
@@ -85,6 +85,7 @@ def run(
             cls_indices = find_class_indices(
                 class_ids, flatten_groups(cls_id, groups, logger=logger), logger=logger
             )
+            logger.debug(f"{cls_indices=}")
             class_masks = [masks[i] for i in cls_indices]
             logger.debug(f"{len(class_masks)=}")
             class_mask = np.zeros((src_image_height, src_image_width))
@@ -98,18 +99,23 @@ def run(
                         erosion_kernel,
                         iterations=erosion.iterations,
                     )
-                    _ = dump_masks.write_erode(erode_img, cls_id, i)
+                    write_erode_failed = dump_masks.write_erode(erode_img, cls_id, i)
+                    logger.debug(f"{write_erode_failed=}")
                     mask_data = erode_img.astype(bool)
                 class_mask[
                     mask.offset_y : mask.offset_y + tile_height,
                     mask.offset_x : mask.offset_x + tile_width,
                 ] += mask_data
-                _ = dump_masks.write_class(class_mask.astype(np.uint8), cls_id, i)
-                _ = dump_masks.write_data(
+                write_class_failed = dump_masks.write_class(
+                    class_mask.astype(np.uint8), cls_id, i
+                )
+                logger.debug(f"{write_class_failed=}")
+                write_data_failed = dump_masks.write_data(
                     mask.data.astype(np.uint8),
                     cls_id,
                     i,
                 )
+                logger.debug(f"{write_data_failed=}")
             class_mask = class_mask.astype(np.uint8)
             contours, _ = cv2.findContours(
                 class_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE

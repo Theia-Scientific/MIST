@@ -67,16 +67,19 @@ def run(
         overlap=(overlap_width, overlap_height),
         tile_size=(tile_width, tile_height),
     )
+    logger.debug(f"{len(tiles)=}")
     logger.info("Creating tiles...DONE")
     class_ids: list[int] = []
     masks: list[merging.Mask] = []
     for index, tile in enumerate(tiles):
         logger.info(f"Running inference on {index} tile...")
         detections = model(tile.img)
+        logger.debug(f"{len(detections)=}")
         if detections.class_id is None:
-            class_ids = [0 for _ in range(len(detections))]
+            class_ids_data = [0 for _ in range(len(detections))]
         else:
-            class_ids = list(detections.class_id)
+            class_ids_data = list(detections.class_id)
+        class_ids.extend(class_ids_data)
         if detections.mask is None:
             masks_data = np.zeros(
                 (len(detections), tile_height, tile_width), dtype=bool
@@ -116,7 +119,7 @@ def run(
                     [instance.id for instance in instances]
                 ),
             },
-            mask=(np.array([instance.mask for instance in instances])),
+            mask=np.array([instance.mask for instance in instances]),
             metadata={
                 STATS_METADATA_FIELD: Stats(
                     merged=Counter(instance_class_names),
