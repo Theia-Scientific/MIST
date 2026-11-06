@@ -1,5 +1,12 @@
 # Change Log
 
+## 1.0.1 (2026-11-06)
+
+### Bug fixes
+
+- Fixed PyPI badge and GitHub Release link ([#43](https://github.com/Theia-Scientific/MIST/pull/43))
+- Fixed detecting not including all of the class IDs ([#45](https://github.com/Theia-Scientific/MIST/pull/45))
+
 ## 1.0.0 (2026-10-02)
 
 ### Features and enhancements
